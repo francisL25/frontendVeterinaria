@@ -1,0 +1,7 @@
+{
+  "name": "vet-clinic-frontend",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react-vite"
+}
