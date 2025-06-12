@@ -21,13 +21,14 @@ import {
   IonModal,
   IonIcon
 } from '@ionic/react';
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { HistorialContext } from '../context/HistorialContext';
-import { useIonRouter } from '@ionic/react';
+import { useIonRouter, useIonViewWillEnter } from '@ionic/react';
+import { useParams } from 'react-router-dom';
 import { checkmarkCircleOutline } from 'ionicons/icons';
 import api from '../services/api';
-import './Tab2.css';
+import './Tab2.css'; // Reusamos los estilos de Tab2
 
 interface InformacionMascota {
   edad: string;
@@ -51,10 +52,11 @@ interface FormData {
   [key: string]: any;
 }
 
-const Tab2: React.FC = () => {
+const EditTab: React.FC = () => {
   const { nombre, logout } = useContext(AuthContext);
   const { triggerRefetch } = useContext(HistorialContext);
   const router = useIonRouter();
+  const { id } = useParams<{ id: string }>();
 
   const initialFormData: FormData = {
     nombreMascota: '',
@@ -79,7 +81,38 @@ const Tab2: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastColor, setToastColor] = useState('danger');
-  const [showSuccessModal, setShowSuccessModal] = useState(false); // Nuevo: estado para el modal
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  useIonViewWillEnter(() => {
+    const fetchHistorial = async () => {
+      try {
+        const response = await api.get(`/historial/${id}`);
+        const historial = response.data;
+        setFormData({
+          nombreMascota: historial.nombreMascota || '',
+          nombreDueño: historial.nombreDueño || '',
+          anamnesis: historial.anamnesis || '',
+          sintomasSignos: historial.sintomasSignos || '',
+          tratamiento: historial.tratamiento || '',
+          diagnostico: historial.diagnostico || '',
+          doctorAtendio: historial.doctorAtendio || '',
+          cita: historial.cita || '',
+          informacionMascota: {
+            edad: historial.InformacionMascotum?.edad?.toString() || '',
+            peso: historial.InformacionMascotum?.peso?.toString() || '',
+            sexo: historial.InformacionMascotum?.sexo || '',
+            castrado: historial.InformacionMascotum?.castrado || false,
+            esterilizado: historial.InformacionMascotum?.esterilizado || false
+          }
+        });
+      } catch (error: any) {
+        setToastMessage('Error al cargar el historial');
+        setToastColor('danger');
+        setShowToast(true);
+      }
+    };
+    fetchHistorial();
+  }, [id]);
 
   const handleInputChange = (e: any) => {
     const { name, value } = e.target;
@@ -141,13 +174,6 @@ const Tab2: React.FC = () => {
     return null;
   };
 
-  const handleClearForm = () => {
-    setFormData(initialFormData);
-    setToastMessage('Formulario limpiado');
-    setToastColor('primary');
-    setShowToast(true);
-  };
-
   const handleSaveHistorial = async () => {
     const validationError = validateForm();
     if (validationError) {
@@ -170,8 +196,8 @@ const Tab2: React.FC = () => {
         }
       };
 
-      await api.post('/historial', payload);
-      setShowSuccessModal(true); // Mostrar el modal en lugar del toast
+      await api.put(`/historial/${id}`, payload);
+      setShowSuccessModal(true);
     } catch (error: any) {
       setToastMessage(error.response?.data?.error || 'Error al guardar historial');
       setToastColor('danger');
@@ -190,7 +216,7 @@ const Tab2: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Agregar Historial</IonTitle>
+          <IonTitle>Editar Historial</IonTitle>
           <IonItem slot="end" lines="none">
             <IonLabel>{nombre || 'Usuario'}</IonLabel>
             <IonButton onClick={logout} color="danger" fill="clear">
@@ -245,13 +271,13 @@ const Tab2: React.FC = () => {
 
           <IonRow>
             <IonCol size="6">
-              <IonButton expand="block" onClick={handleClearForm} color="medium">
-                Limpiar Formulario
+              <IonButton expand="block" onClick={() => router.push('/tabs/tab1')} color="medium">
+                Cancelar
               </IonButton>
             </IonCol>
             <IonCol size="6">
-              <IonButton expand="block" onClick={handleSaveHistorial} color="success">
-                Guardar Historial
+              <IonButton expand="block" onClick={handleSaveHistorial} color="primary">
+                Guardar Cambios
               </IonButton>
             </IonCol>
           </IonRow>
@@ -269,7 +295,7 @@ const Tab2: React.FC = () => {
           <IonContent className="ion-padding ion-text-center">
             <IonIcon icon={checkmarkCircleOutline} color="success" size="large" />
             <h2>Éxito</h2>
-            <p>El historial clínico ha sido guardado correctamente en el sistema.</p>
+            <p>El historial clínico ha sido actualizado correctamente.</p>
             <IonButton onClick={handleCloseSuccessModal} color="primary">Aceptar</IonButton>
           </IonContent>
         </IonModal>
@@ -278,4 +304,4 @@ const Tab2: React.FC = () => {
   );
 };
 
-export default Tab2;
+export default EditTab;

@@ -1,0 +1,46 @@
+/* Fondo con un degradado sutil */
+.login-content {
+  --background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Contenedor centrado y con sombra */
+.login-container {
+  background: white;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Inputs con borde redondeado y sombra leve */
+.input-item {
+  margin-bottom: 1.25rem;
+  --border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Botón con color personalizado y sombra */
+.login-button {
+  --background: #764ba2;
+  --box-shadow: 0 4px 12px rgba(118, 75, 162, 0.6);
+  --border-radius: 8px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: background-color 0.3s ease;
+}
+
+.login-button:hover {
+  --background: #5a3688;
+  cursor: pointer;
+}
+
+/* Cambiar el color del toolbar para que combine */
+.toolbar-custom {
+  --background: #5a3688;
+  color: white;
+}
+
