@@ -23,7 +23,7 @@ import { useIonRouter } from '@ionic/react';
 import api from '../services/api';
 import './Tab1.css';
 
-interface InformacionMascota { // Cambiado a minúscula
+interface InformacionMascotum {
   edad: number;
   peso: number;
   sexo: string;
@@ -41,7 +41,7 @@ interface Historial {
   tratamiento: string;
   diagnostico: string;
   cita: string | null;
-  informacionMascota: InformacionMascota | null; // Cambiado a minúscula
+  InformacionMascotum: InformacionMascotum | null;
 }
 
 const Tab1: React.FC = () => {
@@ -72,7 +72,7 @@ const Tab1: React.FC = () => {
   const fetchHistoriales = async () => {
     try {
       const response = await api.get('/historial');
-      console.log('Historiales cargados:', response.data); // Añadir para depurar
+      console.log('Historiales cargados:', response.data);
       setHistoriales(response.data);
     } catch (error: any) {
       setToastMessage('Error al cargar historiales');
@@ -86,7 +86,7 @@ const Tab1: React.FC = () => {
       const response = await api.get('/historial/search', {
         params: { nombreMascota: searchTerm }
       });
-      console.log('Historiales buscados:', response.data); // Añadir para depurar
+      console.log('Historiales buscados:', response.data);
       setHistoriales(response.data);
     } catch (error: any) {
       setToastMessage('Error al buscar historiales');
@@ -96,7 +96,7 @@ const Tab1: React.FC = () => {
   };
 
   const openDetails = (historial: Historial) => {
-    console.log('Historial seleccionado:', historial); // Añadir para depurar
+    console.log('Historial seleccionado:', historial);
     setSelectedHistorial(historial);
     setShowModal(true);
   };
@@ -110,7 +110,7 @@ const Tab1: React.FC = () => {
 
     try {
       await api.delete(`/historial/${selectedHistorial.id}`);
-      console.log('Historial eliminado:', selectedHistorial.id); // Añadir para depurar
+      console.log('Historial eliminado:', selectedHistorial.id);
       setShowModal(false);
       setToastMessage('Historial eliminado con éxito');
       setToastColor('success');
@@ -133,9 +133,9 @@ const Tab1: React.FC = () => {
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar>
+        <IonToolbar className="custom-toolbar">
           <IonTitle>Tab 1</IonTitle>
-          <IonItem slot="end" lines="none">
+          <IonItem slot="end" lines="none" className="user-info">
             <IonLabel>{nombre || 'Usuario'}</IonLabel>
             <IonButton onClick={logout} color="danger" fill="clear">
               Cerrar Sesión
@@ -143,36 +143,36 @@ const Tab1: React.FC = () => {
           </IonItem>
         </IonToolbar>
       </IonHeader>
-      <IonContent fullscreen className="ion-padding">
+      <IonContent fullscreen className="ion-padding custom-content">
         <IonItem lines="none" className="search-container">
-          <IonButton slot="start" onClick={handleAddHistorial} color="primary">
+          <IonButton slot="start" onClick={handleAddHistorial} color="primary" className="add-button">
             Agregar Historial
           </IonButton>
           <IonInput
             slot="end"
-            placeholder="text"
+            placeholder="Buscar por nombre de mascota"
             value={searchTerm}
             onIonChange={(e) => setSearchTerm(e.detail.value!)}
             clearInput
             className="search-input"
           />
         </IonItem>
-        <IonGrid>
+        <IonGrid className="custom-table">
           <IonRow className="table-row-header">
-            <IonCol size="2">Nro</IonCol>
-            <IonCol size="3">Mascota</IonCol>
-            <IonCol size="3">Dueño</IonCol>
-            <IonCol size="3">Doctor Atendió</IonCol>
-            <IonCol size="1"></IonCol>
+            <IonCol size="2" className="table-header">Nro</IonCol>
+            <IonCol size="3" className="table-header">Mascota</IonCol>
+            <IonCol size="3" className="table-header">Dueño</IonCol>
+            <IonCol size="3" className="table-header">Doctor Atendió</IonCol>
+            <IonCol size="1" className="table-header"></IonCol>
           </IonRow>
           {historiales.map((historial, index) => (
             <IonRow key={historial.id} className="table-row">
-              <IonCol size="2">{index + 1}</IonCol>
-              <IonCol size="3">{historial.nombreMascota}</IonCol>
-              <IonCol size="3">{historial.nombreDueño}</IonCol>
-              <IonCol size="3">{historial.doctorAtendio}</IonCol>
-              <IonCol size="1">
-                <IonButton fill="clear" onClick={() => openDetails(historial)}>
+              <IonCol size="2" className="table-cell">{index + 1}</IonCol>
+              <IonCol size="3" className="table-cell">{historial.nombreMascota}</IonCol>
+              <IonCol size="3" className="table-cell">{historial.nombreDueño}</IonCol>
+              <IonCol size="3" className="table-cell">{historial.doctorAtendio}</IonCol>
+              <IonCol size="1" className="table-cell">
+                <IonButton fill="clear" onClick={() => openDetails(historial)} className="view-button">
                   Ver más
                 </IonButton>
               </IonCol>
@@ -180,26 +180,26 @@ const Tab1: React.FC = () => {
           ))}
         </IonGrid>
 
-        <IonModal isOpen={showModal} onDidDismiss={() => setShowModal(false)} className="details-modal">
+        <IonModal isOpen={showModal} onDidDismiss={() => setShowModal(false)} className="custom-modal">
           <IonHeader>
-            <IonToolbar>
-              <IonTitle>Detalles del Historial</IonTitle>
+            <IonToolbar className="custom-modal-toolbar">
+              <IonTitle style={{ color: 'white' }}><h2>Detalles del Historial</h2></IonTitle>
               <IonButtons slot="end">
-                <IonButton onClick={() => setShowModal(false)}>Cerrar</IonButton>
+                <IonButton color="secondary" fill="solid" onClick={() => setShowModal(false)}>Cerrar</IonButton>
               </IonButtons>
             </IonToolbar>
           </IonHeader>
-          <IonContent className="ion-padding">
+          <IonContent className="ion-padding custom-modal-content">
             {selectedHistorial && (
               <IonGrid className="details-table">
                 <IonRow className="details-row">
                   <IonCol><strong>Mascota</strong><br/>{selectedHistorial.nombreMascota}</IonCol>
                   <IonCol><strong>Dueño</strong><br/>{selectedHistorial.nombreDueño}</IonCol>
-                  <IonCol><strong>Edad</strong><br/>{selectedHistorial.informacionMascota?.edad ?? 'N/A'} años</IonCol>
-                  <IonCol><strong>Peso</strong><br/>{selectedHistorial.informacionMascota?.peso ?? 'N/A'} kg</IonCol>
-                  <IonCol><strong>Sexo</strong><br/>{selectedHistorial.informacionMascota?.sexo ?? 'N/A'}</IonCol>
-                  <IonCol><strong>Castrado</strong><br/>{selectedHistorial.informacionMascota ? (selectedHistorial.informacionMascota.castrado ? 'Sí' : 'No') : 'N/A'}</IonCol>
-                  <IonCol><strong>Esterilizado</strong><br/>{selectedHistorial.informacionMascota ? (selectedHistorial.informacionMascota.esterilizado ? 'Sí' : 'No') : 'N/A'}</IonCol>
+                  <IonCol><strong>Edad</strong><br/>{selectedHistorial.InformacionMascotum?.edad ?? 'N/A'} años</IonCol>
+                  <IonCol><strong>Peso</strong><br/>{selectedHistorial.InformacionMascotum?.peso ?? 'N/A'} kg</IonCol>
+                  <IonCol><strong>Sexo</strong><br/>{selectedHistorial.InformacionMascotum?.sexo ?? 'N/A'}</IonCol>
+                  <IonCol><strong>Castrado</strong><br/>{selectedHistorial.InformacionMascotum ? (selectedHistorial.InformacionMascotum.castrado ? 'Sí' : 'No') : 'N/A'}</IonCol>
+                  <IonCol><strong>Esterilizado</strong><br/>{selectedHistorial.InformacionMascotum ? (selectedHistorial.InformacionMascotum.esterilizado ? 'Sí' : 'No') : 'N/A'}</IonCol>
                 </IonRow>
                 <IonRow className="details-row">
                   <IonCol size="12"><strong>Anamnesis</strong><br/>{selectedHistorial.anamnesis}</IonCol>
@@ -220,12 +220,12 @@ const Tab1: React.FC = () => {
               </IonGrid>
             )}
           </IonContent>
-          <IonToolbar slot="bottom">
+          <IonToolbar slot="bottom" className="custom-modal-toolbar-bottom">
             <IonButtons slot="start">
-              <IonButton color="danger" onClick={() => setShowDeleteAlert(true)}>Eliminar</IonButton>
+              <IonButton color="danger" fill="solid" onClick={() => setShowDeleteAlert(true)}>Eliminar</IonButton>
             </IonButtons>
             <IonButtons slot="end">
-              <IonButton color="primary" onClick={handleEditHistorial}>Editar</IonButton>
+              <IonButton color="success" fill="solid" onClick={handleEditHistorial}>Editar</IonButton>
             </IonButtons>
           </IonToolbar>
         </IonModal>
