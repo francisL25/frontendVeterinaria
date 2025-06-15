@@ -77,15 +77,15 @@ const searchHistoriales = async () => {
     <IonPage>
       <IonHeader>
         <IonToolbar className="detalles-arriba">
-          <IonTitle><h1>Historiales</h1></IonTitle>
+          <IonTitle>Historiales</IonTitle>
           <UserMenu />
         </IonToolbar>
       </IonHeader>
 
       <IonContent fullscreen className="p-4">
         <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-2">
-          <IonButton color="primary" onClick={() => router.push('/tabs/tab2')}>
-            Agregar Historial
+          <IonButton size="default" color="tertiary" onClick={() => router.push('/tabs/tab2')}>
+            Agregar Historial Nuevo
           </IonButton>
           <div className="flex items-center w-full md:w-1/2 gap-2">
             <IonIcon icon={searchOutline} />

@@ -18,260 +18,138 @@ import {
   IonPopover,
   IonCheckbox,
   IonToast,
-  IonModal,
-  IonIcon
+  IonIcon,
 } from '@ionic/react';
 import { useContext, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { HistorialContext } from '../context/HistorialContext';
-import { useIonRouter } from '@ionic/react';
 import { checkmarkCircleOutline } from 'ionicons/icons';
 import api from '../services/api';
 import UserMenu from '../components/UserMenu';
 
-interface InformacionMascota {
-  edad: string;
-  peso: string;
-  sexo: string;
-  castrado: boolean;
-  esterilizado: boolean;
-  [key: string]: string | boolean;
-}
-
-interface FormData {
-  nombreMascota: string;
-  nombreDueño: string;
-  anamnesis: string;
-  sintomasSignos: string;
-  tratamiento: string;
-  diagnostico: string;
-  doctorAtendio: string;
-  cita: string;
-  informacionMascota: InformacionMascota;
-  [key: string]: any;
-}
-
 const Tab2: React.FC = () => {
-  const { nombre, logout } = useContext(AuthContext);
+  const { nombre } = useContext(AuthContext);
   const { triggerRefetch } = useContext(HistorialContext);
-  const router = useIonRouter();
 
-  const initialFormData: FormData = {
+  const initialForm = {
     nombreMascota: '',
-    nombreDueño: '',
+    raza: '',
+    especie: '',
+    fechaNacimiento: '',
+    sexo: '',
+    nombreDueno: '',
+    carnetIdentidad: '',
+    telefono: '',
+    direccion: '',
+    peso: '',
+    castrado: false,
+    esterilizado: false,
+    seniaParticular: '',
     anamnesis: '',
     sintomasSignos: '',
     tratamiento: '',
     diagnostico: '',
-    doctorAtendio: '',
     cita: '',
-    informacionMascota: {
-      edad: '',
-      peso: '',
-      sexo: '',
-      castrado: false,
-      esterilizado: false
-    }
+    doctorAtendio: '',
+    fechaHistorial: ''
   };
 
-  const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [formData, setFormData] = useState(initialForm);
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   const [toastColor, setToastColor] = useState('danger');
-  const [showSuccessModal, setShowSuccessModal] = useState(false); // Nuevo: estado para el modal
+  const [openPicker, setOpenPicker] = useState('');
 
   const handleInputChange = (e: any) => {
     const { name, value } = e.target;
-    if (['edad', 'peso', 'sexo'].includes(name)) {
-      setFormData((prev) => ({
-        ...prev,
-        informacionMascota: { ...prev.informacionMascota, [name]: value }
-      }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleCheckboxChange = (name: string, checked: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      informacionMascota: {
-        ...prev.informacionMascota,
-        castrado: name === 'castrado' ? checked : prev.informacionMascota.castrado,
-        esterilizado: name === 'esterilizado' ? checked : prev.informacionMascota.esterilizado
-      }
-    }));
+    setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
-  const handleDateChange = (e: CustomEvent) => {
-    setFormData((prev) => ({ ...prev, cita: e.detail.value }));
-    setShowDatePicker(false);
+  const handleDateChange = (name: string, e: CustomEvent) => {
+    setFormData(prev => ({ ...prev, [name]: e.detail.value }));
+    setOpenPicker('');
   };
 
-  const validateForm = () => {
-    const requiredFields = [
-      'nombreMascota',
-      'nombreDueño',
-      'anamnesis',
-      'sintomasSignos',
-      'tratamiento',
-      'diagnostico',
-      'doctorAtendio'
-    ];
-    for (const field of requiredFields) {
-      const value = formData[field];
-      if (!value || (typeof value === 'string' && !value.trim())) {
-        return `El campo ${field} es obligatorio`;
-      }
-    }
-    const infoMascotaFields = ['edad', 'peso', 'sexo'];
-    for (const field of infoMascotaFields) {
-      const value = formData.informacionMascota[field];
-      if (!value || (typeof value === 'string' && !value.trim())) {
-        return `El campo ${field} de información de la mascota es obligatorio`;
-      }
-    }
-    if (isNaN(Number(formData.informacionMascota.edad)) || Number(formData.informacionMascota.edad) <= 0) {
-      return 'La edad debe ser un número positivo';
-    }
-    if (isNaN(Number(formData.informacionMascota.peso)) || Number(formData.informacionMascota.peso) <= 0) {
-      return 'El peso debe ser un número positivo';
-    }
-    return null;
-  };
-
-  const handleClearForm = () => {
-    setFormData(initialFormData);
-    setToastMessage('Formulario limpiado');
-    setToastColor('primary');
-    setShowToast(true);
-  };
-
-  const handleSaveHistorial = async () => {
-    const validationError = validateForm();
-    if (validationError) {
-      setToastMessage(validationError);
-      setToastColor('danger');
-      setShowToast(true);
-      return;
-    }
-
-    try {
-      const payload = {
-        ...formData,
-        cita: formData.cita ? new Date(formData.cita).toISOString().split('T')[0] : null,
-        informacionMascota: {
-          edad: Number(formData.informacionMascota.edad),
-          peso: Number(formData.informacionMascota.peso),
-          sexo: formData.informacionMascota.sexo,
-          castrado: formData.informacionMascota.castrado,
-          esterilizado: formData.informacionMascota.esterilizado
-        }
-      };
-
-      await api.post('/historial', payload);
-      setShowSuccessModal(true); // Mostrar el modal en lugar del toast
-    } catch (error: any) {
-      setToastMessage(error.response?.data?.error || 'Error al guardar historial');
-      setToastColor('danger');
-      setShowToast(true);
-    }
-  };
-
-  const handleCloseSuccessModal = () => {
-    setShowSuccessModal(false);
-    setFormData(initialFormData);
-    triggerRefetch();
-    router.push('/tabs/tab1', 'root');
-  };
+  const camposFecha = ['fechaNacimiento', 'cita', 'fechaHistorial'];
 
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar className="custom-toolbar">
-          <IonTitle>Agregar Historial</IonTitle>
+        <IonToolbar>
+          <IonTitle>Agregar Historial Completo</IonTitle>
           <UserMenu />
         </IonToolbar>
       </IonHeader>
 
       <IonContent fullscreen className="ion-padding">
-        <IonGrid className="form-table">
+        <IonGrid>
           <IonRow>
-            <IonCol><IonItem><IonLabel position="stacked">Mascota</IonLabel><IonInput name="nombreMascota" value={formData.nombreMascota} onIonChange={handleInputChange} /></IonItem></IonCol>
-            <IonCol><IonItem><IonLabel position="stacked">Dueño</IonLabel><IonInput name="nombreDueño" value={formData.nombreDueño} onIonChange={handleInputChange} /></IonItem></IonCol>
-            <IonCol><IonItem><IonLabel position="stacked">Edad (años)</IonLabel><IonInput name="edad" type="number" value={formData.informacionMascota.edad} onIonChange={handleInputChange} /></IonItem></IonCol>
-            <IonCol><IonItem><IonLabel position="stacked">Peso (kg)</IonLabel><IonInput name="peso" type="number" step="0.1" value={formData.informacionMascota.peso} onIonChange={handleInputChange} /></IonItem></IonCol>
-            <IonCol><IonItem><IonLabel position="stacked">Sexo</IonLabel>
-              <IonSelect name="sexo" value={formData.informacionMascota.sexo} onIonChange={handleInputChange} placeholder="Seleccionar">
+            <IonCol size="6"><IonItem><IonLabel position="stacked">Nombre Mascota</IonLabel><IonInput name="nombreMascota" value={formData.nombreMascota} onIonChange={handleInputChange} /></IonItem></IonCol>
+            <IonCol size="6"><IonItem><IonLabel position="stacked">Raza</IonLabel><IonInput name="raza" value={formData.raza} onIonChange={handleInputChange} /></IonItem></IonCol>
+            <IonCol size="6"><IonItem><IonLabel position="stacked">Especie</IonLabel><IonInput name="especie" value={formData.especie} onIonChange={handleInputChange} /></IonItem></IonCol>
+            <IonCol size="6">
+              <IonItem>
+                <IonLabel position="stacked">Fecha Nacimiento</IonLabel>
+                <IonButton id="fechaNacimiento" onClick={() => setOpenPicker('fechaNacimiento')}>Seleccionar Fecha</IonButton>
+                {formData.fechaNacimiento && <IonLabel>{new Date(formData.fechaNacimiento).toLocaleDateString()}</IonLabel>}
+              </IonItem>
+              <IonPopover trigger="fechaNacimiento" isOpen={openPicker === 'fechaNacimiento'} onDidDismiss={() => setOpenPicker('')}>
+                <IonDatetime presentation="date" onIonChange={(e) => handleDateChange('fechaNacimiento', e)} />
+              </IonPopover>
+            </IonCol>
+            <IonCol size="6"><IonItem><IonLabel position="stacked">Sexo</IonLabel>
+              <IonSelect name="sexo" value={formData.sexo} onIonChange={handleInputChange}>
                 <IonSelectOption value="Macho">Macho</IonSelectOption>
                 <IonSelectOption value="Hembra">Hembra</IonSelectOption>
               </IonSelect>
             </IonItem></IonCol>
-            <IonCol><IonItem><IonLabel>Castrado</IonLabel><IonCheckbox name="castrado" checked={formData.informacionMascota.castrado} onIonChange={(e) => handleCheckboxChange('castrado', e.detail.checked)} disabled={formData.informacionMascota.esterilizado} /></IonItem></IonCol>
-            <IonCol><IonItem><IonLabel>Esterilizado</IonLabel><IonCheckbox name="esterilizado" checked={formData.informacionMascota.esterilizado} onIonChange={(e) => handleCheckboxChange('esterilizado', e.detail.checked) } disabled={formData.informacionMascota.castrado}/></IonItem></IonCol>
-          </IonRow>
-
-          <IonRow><IonCol size="12"><IonLabel position="stacked">Anamnesis</IonLabel><IonTextarea name="anamnesis" value={formData.anamnesis} onIonChange={handleInputChange} rows={3} /></IonCol></IonRow>
-          <IonRow><IonCol size="12"><IonLabel position="stacked">Síntomas y Signos</IonLabel><IonTextarea name="sintomasSignos" value={formData.sintomasSignos} onIonChange={handleInputChange} rows={3} /></IonCol></IonRow>
-          <IonRow><IonCol size="12"><IonLabel position="stacked">Tratamiento</IonLabel><IonTextarea name="tratamiento" value={formData.tratamiento} onIonChange={handleInputChange} rows={3} /></IonCol></IonRow>
-          <IonRow><IonCol size="12"><IonLabel position="stacked">Diagnóstico</IonLabel><IonTextarea name="diagnostico" value={formData.diagnostico} onIonChange={handleInputChange} rows={3} /></IonCol></IonRow>
-
-          <IonRow>
-            <IonCol>
-              <IonItem>
-                <IonLabel position="stacked">Doctor Atendió</IonLabel>
-                <IonInput name="doctorAtendio" value={formData.doctorAtendio} onIonChange={handleInputChange} />
-              </IonItem>
-            </IonCol>
-            <IonCol>
+            <IonCol size="6"><IonItem><IonLabel position="stacked">Nombre Dueño</IonLabel><IonInput name="nombreDueno" value={formData.nombreDueno} onIonChange={handleInputChange} /></IonItem></IonCol>
+            <IonCol size="6"><IonItem><IonLabel position="stacked">Carnet Identidad</IonLabel><IonInput name="carnetIdentidad" value={formData.carnetIdentidad} onIonChange={handleInputChange} /></IonItem></IonCol>
+            <IonCol size="6"><IonItem><IonLabel position="stacked">Teléfono</IonLabel><IonInput name="telefono" value={formData.telefono} onIonChange={handleInputChange} /></IonItem></IonCol>
+            <IonCol size="12"><IonItem><IonLabel position="stacked">Dirección</IonLabel><IonInput name="direccion" value={formData.direccion} onIonChange={handleInputChange} /></IonItem></IonCol>
+            <IonCol size="6"><IonItem><IonLabel position="stacked">Peso (kg)</IonLabel><IonInput name="peso" value={formData.peso} type="number" onIonChange={handleInputChange} /></IonItem></IonCol>
+            <IonCol size="3"><IonItem><IonLabel>Castrado</IonLabel><IonCheckbox checked={formData.castrado} onIonChange={(e) => handleCheckboxChange('castrado', e.detail.checked)} /></IonItem></IonCol>
+            <IonCol size="3"><IonItem><IonLabel>Esterilizado</IonLabel><IonCheckbox checked={formData.esterilizado} onIonChange={(e) => handleCheckboxChange('esterilizado', e.detail.checked)} /></IonItem></IonCol>
+            <IonCol size="12"><IonItem><IonLabel position="stacked">Seña Particular</IonLabel><IonTextarea name="seniaParticular" value={formData.seniaParticular} onIonChange={handleInputChange} rows={2} /></IonItem></IonCol>
+            <IonCol size="12"><IonItem><IonLabel position="stacked">Anamnesis</IonLabel><IonTextarea name="anamnesis" value={formData.anamnesis} onIonChange={handleInputChange} rows={3} /></IonItem></IonCol>
+            <IonCol size="12"><IonItem><IonLabel position="stacked">Síntomas y Signos</IonLabel><IonTextarea name="sintomasSignos" value={formData.sintomasSignos} onIonChange={handleInputChange} rows={3} /></IonItem></IonCol>
+            <IonCol size="12"><IonItem><IonLabel position="stacked">Tratamiento</IonLabel><IonTextarea name="tratamiento" value={formData.tratamiento} onIonChange={handleInputChange} rows={3} /></IonItem></IonCol>
+            <IonCol size="12"><IonItem><IonLabel position="stacked">Diagnóstico</IonLabel><IonTextarea name="diagnostico" value={formData.diagnostico} onIonChange={handleInputChange} rows={3} /></IonItem></IonCol>
+            <IonCol size="6"><IonItem><IonLabel position="stacked">Doctor Atendió</IonLabel><IonInput name="doctorAtendio" value={formData.doctorAtendio} onIonChange={handleInputChange} /></IonItem></IonCol>
+            <IonCol size="6">
               <IonItem>
                 <IonLabel position="stacked">Cita</IonLabel>
-                <IonButton id="open-date-picker" onClick={() => setShowDatePicker(true)}>
-                  Seleccionar Fecha
-                </IonButton>
-                <IonPopover trigger="open-date-picker" isOpen={showDatePicker} onDidDismiss={() => setShowDatePicker(false)}>
-                  <IonDatetime name="cita" value={formData.cita} onIonChange={handleDateChange} presentation="date-time" />
-                </IonPopover>
+                <IonButton id="cita" onClick={() => setOpenPicker('cita')}>Seleccionar Cita</IonButton>
                 {formData.cita && <IonLabel>{new Date(formData.cita).toLocaleString()}</IonLabel>}
               </IonItem>
-            </IonCol>
-          </IonRow>
-
-          <IonRow>
-            <IonCol size="6">
-              <IonButton expand="block" onClick={handleClearForm} color="medium">
-                Limpiar Formulario
-              </IonButton>
+              <IonPopover trigger="cita" isOpen={openPicker === 'cita'} onDidDismiss={() => setOpenPicker('')}>
+                <IonDatetime presentation="date-time" onIonChange={(e) => handleDateChange('cita', e)} />
+              </IonPopover>
             </IonCol>
             <IonCol size="6">
-              <IonButton expand="block" onClick={handleSaveHistorial} color="success">
-                Guardar Historial
-              </IonButton>
+              <IonItem>
+                <IonLabel position="stacked">Fecha Historial</IonLabel>
+                <IonButton id="fechaHistorial" onClick={() => setOpenPicker('fechaHistorial')}>Seleccionar Fecha</IonButton>
+                {formData.fechaHistorial && <IonLabel>{new Date(formData.fechaHistorial).toLocaleString()}</IonLabel>}
+              </IonItem>
+              <IonPopover trigger="fechaHistorial" isOpen={openPicker === 'fechaHistorial'} onDidDismiss={() => setOpenPicker('')}>
+                <IonDatetime presentation="date-time" onIonChange={(e) => handleDateChange('fechaHistorial', e)} />
+              </IonPopover>
             </IonCol>
           </IonRow>
         </IonGrid>
 
         <IonToast
           isOpen={showToast}
-          onDidDismiss={() => setShowToast(false)}
           message={toastMessage}
-          duration={3000}
           color={toastColor}
+          duration={3000}
+          onDidDismiss={() => setShowToast(false)}
         />
-
-        <IonPopover
-          isOpen={showSuccessModal}
-          onDidDismiss={handleCloseSuccessModal}
-          translucent={true}
-        >
-          <IonContent className="ion-padding ion-text-center">
-            <IonIcon icon={checkmarkCircleOutline} color="success" size="large" />
-            <h2>Éxito</h2>
-            <p>El historial clínico ha sido guardado correctamente en el sistema.</p>
-            <IonButton onClick={handleCloseSuccessModal} color="primary">Aceptar</IonButton>
-          </IonContent>
-        </IonPopover>
       </IonContent>
     </IonPage>
   );

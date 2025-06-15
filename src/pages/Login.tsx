@@ -40,7 +40,7 @@ const Login: React.FC = () => {
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar className="custom-toolbar">
+        <IonToolbar className="detalles-arriba">
           <IonTitle className="custom-title text-center"><h1>CLÍNICA VETERINARIA QUERUBINES</h1></IonTitle>
         </IonToolbar>
       </IonHeader>
@@ -66,7 +66,7 @@ const Login: React.FC = () => {
                 fill="solid"
                 label="Usuario"
                 labelPlacement="floating"
-                placeholder="Introduzca su Usuario"
+                placeholder="Introduzca su usuario"
                 value={usuario}
                 onIonChange={(e) => setUsuario(e.detail.value!)}
                 type="text"
@@ -80,7 +80,7 @@ const Login: React.FC = () => {
 
                 label="Contraseña"
                 labelPlacement="floating"
-                placeholder="Introduzca su Contraseña"
+                placeholder="Introduzca su contraseña"
                 value={password}
                 onIonChange={(e) => setPassword(e.detail.value!)}
                 type="password"
