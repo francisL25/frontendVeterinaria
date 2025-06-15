@@ -11,10 +11,11 @@ import {
   IonItem,
   IonLabel,
   IonToast,
+  IonIcon
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import './Login.css';
+import { personCircleSharp } from 'ionicons/icons';
 
 const Login: React.FC = () => {
   const [usuario, setUsuario] = useState('');
@@ -40,36 +41,62 @@ const Login: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar className="custom-toolbar">
-          <IonTitle className="custom-title"><h1>CLÍNICA VETERINARIA QUERUBINES</h1></IonTitle>
+          <IonTitle className="custom-title text-center"><h1>CLÍNICA VETERINARIA QUERUBINES</h1></IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent fullscreen className="login-content ion-no-padding">
-        <div className="login-wrapper">
-          <div className="login-container">
-            <h1 className="login-title">Bienvenido</h1>
-            <p className="login-subtitle">Por favor, ingresa tus credenciales</p>
-            <IonItem className="login-input">
-              <IonLabel position="stacked"><h1>Usuario</h1></IonLabel>
+      <IonContent fullscreen className="ion-padding bg-gradient-to-b from-purple-100 to-white">
+        <div className="flex flex-col items-center justify-center min-h-[80vh]">
+
+          {/* Tarjeta con borde morado */}
+          <div className="bg-white border-2 border-purple-500 shadow-xl rounded-2xl p-8 w-full max-w-md">
+
+            <div className="flex justify-center mb-4">
+              <IonIcon icon={personCircleSharp} className="text-purple-600 text-6xl" />
+            </div>
+
+            <h1 className="text-2xl font-bold text-center text-purple-700 mb-2">
+              Bienvenido
+            </h1>
+            <p className="text-center text-gray-500 mb-6">
+              Por favor, ingresa tus credenciales
+            </p>
+
+            <IonItem lines="none" className="mb-4">
               <IonInput
+                fill="solid"
+                label="Usuario"
+                labelPlacement="floating"
+                placeholder="Introduzca su Usuario"
                 value={usuario}
                 onIonChange={(e) => setUsuario(e.detail.value!)}
                 type="text"
                 required
               />
             </IonItem>
-            <IonItem className="login-input">
-              <IonLabel position="stacked"><h1>Password</h1></IonLabel>
+
+            <IonItem lines="none" className="mb-6">
               <IonInput
+                fill="solid"
+
+                label="Contraseña"
+                labelPlacement="floating"
+                placeholder="Introduzca su Contraseña"
                 value={password}
                 onIonChange={(e) => setPassword(e.detail.value!)}
                 type="password"
                 required
               />
             </IonItem>
+            <div className="ion-text-center">
+              <IonButton
+                fill="clear"
+                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition duration-300"
+                onClick={handleLogin}
+              >
+                Iniciar Sesión
+              </IonButton>
+            </div>
 
-            <IonButton expand="block" onClick={handleLogin} className="login-button">
-              Iniciar Sesión
-            </IonButton>
           </div>
         </div>
 
@@ -81,6 +108,7 @@ const Login: React.FC = () => {
           color="danger"
         />
       </IonContent>
+
 
     </IonPage>
   );

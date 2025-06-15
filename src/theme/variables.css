@@ -62,3 +62,23 @@
   --ion-color-light-shade: #d7d8da;
   --ion-color-light-tint: #f5f6f9;
 }
+
+/* Estilo para hacer más grande el modal y centrarlo */
+.custom-modal {
+  --width: 90vw !important;
+  --max-width: 90vw !important;
+  --height: 90vh !important;
+  --border-radius: 0.75rem;
+  --box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+/* Estilo para el fondo oscuro con menos opacidad (menos sombra) */
+.custom-backdrop {
+  --backdrop-opacity: 0.3 !important;
+  /* Si quieres un color más claro o diferente */
+  --backdrop-background: rgba(0, 0, 0, 0.3) !important;
+}
+.detalles-arriba {
+  --background: #b70ba3;
+  color: white;
+}

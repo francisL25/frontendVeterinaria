@@ -26,23 +26,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const router = useIonRouter();
 
   useEffect(() => {
-    const loadToken = async () => {
+    const loadSession = async () => {
       const storedToken = await getToken();
-      console.log('Token al cargar app:', storedToken); // Depuración
+      const storedNombre = localStorage.getItem('nombre'); // 👈 cargar nombre
+
+      console.log('Token al cargar app:', storedToken);
       if (storedToken) {
         setTokenState(storedToken);
         setIsAuthenticated(true);
       }
+
+      if (storedNombre) {
+        setNombre(storedNombre); // 👈 establecer nombre
+      }
     };
-    loadToken();
+    loadSession();
   }, []);
 
   const login = async (usuario: string, password: string) => {
     try {
       const response = await api.post('/auth/login', { usuario, password });
       const { token, nombre } = response.data;
-      console.log('Login exitoso, token:', token, 'nombre:', nombre); // Depuración
+      console.log('Login exitoso, token:', token, 'nombre:', nombre);
+
       await setToken(token);
+      localStorage.setItem('nombre', nombre); // 👈 guardar nombre
+
       setTokenState(token);
       setNombre(nombre);
       setIsAuthenticated(true);
@@ -56,20 +65,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       const currentToken = await getToken();
-      console.log('Token antes de logout:', currentToken); // Depuración
+      console.log('Token antes de logout:', currentToken);
+
       if (!currentToken) {
         console.warn('No hay token para logout');
       }
+
       await api.post('/auth/logout');
-      await removeToken();
-      setTokenState(null);
-      setNombre(null);
-      setIsAuthenticated(false);
-      router.push('/login', 'root', 'replace');
     } catch (error: any) {
       console.error('Error en logout:', error.response?.data || error.message);
-      // Limpiar estado incluso si el backend falla
+    } finally {
       await removeToken();
+      localStorage.removeItem('nombre'); // 👈 borrar nombre
+
       setTokenState(null);
       setNombre(null);
       setIsAuthenticated(false);

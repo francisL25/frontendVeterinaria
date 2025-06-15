@@ -28,7 +28,7 @@ import { useIonRouter, useIonViewWillEnter } from '@ionic/react';
 import { useParams } from 'react-router-dom';
 import { checkmarkCircleOutline } from 'ionicons/icons';
 import api from '../services/api';
-import './Tab2.css'; // Reusamos los estilos de Tab2
+import UserMenu from '../components/UserMenu';
 
 interface InformacionMascota {
   edad: string;
@@ -209,20 +209,15 @@ const EditTab: React.FC = () => {
     setShowSuccessModal(false);
     setFormData(initialFormData);
     triggerRefetch();
-    router.push('/tabs/tab1', 'root', 'replace');
+    router.push('/tabs/tab1', 'root');
   };
 
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar>
+        <IonToolbar className="custom-toolbar">
           <IonTitle>Editar Historial</IonTitle>
-          <IonItem slot="end" lines="none">
-            <IonLabel>{nombre || 'Usuario'}</IonLabel>
-            <IonButton onClick={logout} color="danger" fill="clear">
-              Cerrar Sesión
-            </IonButton>
-          </IonItem>
+          <UserMenu />
         </IonToolbar>
       </IonHeader>
 
@@ -239,8 +234,8 @@ const EditTab: React.FC = () => {
                 <IonSelectOption value="Hembra">Hembra</IonSelectOption>
               </IonSelect>
             </IonItem></IonCol>
-            <IonCol><IonItem><IonLabel>Castrado</IonLabel><IonCheckbox name="castrado" checked={formData.informacionMascota.castrado} onIonChange={(e) => handleCheckboxChange('castrado', e.detail.checked)} /></IonItem></IonCol>
-            <IonCol><IonItem><IonLabel>Esterilizado</IonLabel><IonCheckbox name="esterilizado" checked={formData.informacionMascota.esterilizado} onIonChange={(e) => handleCheckboxChange('esterilizado', e.detail.checked)} /></IonItem></IonCol>
+            <IonCol><IonItem><IonLabel>Castrado</IonLabel><IonCheckbox name="castrado" checked={formData.informacionMascota.castrado} onIonChange={(e) => handleCheckboxChange('castrado', e.detail.checked)} disabled={formData.informacionMascota.esterilizado}/></IonItem></IonCol>
+            <IonCol><IonItem><IonLabel>Esterilizado</IonLabel><IonCheckbox name="esterilizado" checked={formData.informacionMascota.esterilizado} onIonChange={(e) => handleCheckboxChange('esterilizado', e.detail.checked)} disabled={formData.informacionMascota.castrado}/></IonItem></IonCol>
           </IonRow>
 
           <IonRow><IonCol size="12"><IonLabel position="stacked">Anamnesis</IonLabel><IonTextarea name="anamnesis" value={formData.anamnesis} onIonChange={handleInputChange} rows={3} /></IonCol></IonRow>
@@ -291,14 +286,19 @@ const EditTab: React.FC = () => {
           color={toastColor}
         />
 
-        <IonModal isOpen={showSuccessModal} onDidDismiss={handleCloseSuccessModal} className="success-modal">
+        <IonPopover
+          isOpen={showSuccessModal}
+          onDidDismiss={handleCloseSuccessModal}
+          translucent={true}
+        >
           <IonContent className="ion-padding ion-text-center">
             <IonIcon icon={checkmarkCircleOutline} color="success" size="large" />
             <h2>Éxito</h2>
             <p>El historial clínico ha sido actualizado correctamente.</p>
             <IonButton onClick={handleCloseSuccessModal} color="primary">Aceptar</IonButton>
           </IonContent>
-        </IonModal>
+        </IonPopover>
+
       </IonContent>
     </IonPage>
   );

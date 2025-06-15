@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Tab1 from './pages/Tab1';
 import Tab2 from './pages/Tab2';
 import EditTab from './pages/EditTab';
+import HistorialFecha from './pages/historialFecha';
 import { AuthProvider } from './context/AuthContext';
 import { HistorialProvider } from './context/HistorialContext';
 
@@ -47,6 +48,9 @@ const App: React.FC = () => (
             <Route exact path="/edit-tab/:id">
               <EditTab />
             </Route>
+            <Route exact path="/historial/:id">
+              <HistorialFecha />
+            </Route>
             <Route exact path="/tabs">
               <Redirect to="/tabs/tab1" />
             </Route>
@@ -54,6 +58,7 @@ const App: React.FC = () => (
               <Redirect to="/login" />
             </Route>
           </IonRouterOutlet>
+
         </HistorialProvider>
       </AuthProvider>
     </IonReactRouter>
