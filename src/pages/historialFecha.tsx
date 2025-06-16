@@ -74,11 +74,8 @@ const DetallesHistorial: React.FC = () => {
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar className="detalles-arriba">
-          <IonTitle className="detalles-arriba">
-            Detalles del Historial #{idH}
-          </IonTitle>
-          <UserMenu />
+        <IonToolbar className="detalles-arriba bg-blue-700">
+          <UserMenu titulo={`Detalles del Historial #${idH}`} />
         </IonToolbar>
       </IonHeader>
 
@@ -87,7 +84,11 @@ const DetallesHistorial: React.FC = () => {
           <IonButton routerLink="/tabs/tab1" color="medium">
             ← Volver
           </IonButton>
+          <IonButton color="tertiary" routerLink={`/tabs/tab3/${idH}`}>
+            Agregar Historial
+          </IonButton>
         </div>
+
 
         {historialesFecha.length > 0 ? (
           <div className="overflow-auto">

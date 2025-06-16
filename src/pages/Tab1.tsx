@@ -60,45 +60,54 @@ const Tab1: React.FC = () => {
     }
   };
 
-const searchHistoriales = async () => {
-  try {
-    const response = await api.get('/historial/search', {
-      params: { texto: searchTerm },  // Aquí cambio nombreMascota por texto
-    });
-    setHistoriales(response.data);
-  } catch (error: any) {
-    setToastMessage('Error al buscar historiales');
-    setToastColor('danger');
-    setShowToast(true);
-  }
-};
+  const searchHistoriales = async () => {
+    try {
+      const response = await api.get('/historial/search', {
+        params: { texto: searchTerm },  // Aquí cambio nombreMascota por texto
+      });
+      setHistoriales(response.data);
+    } catch (error: any) {
+      setToastMessage('Error al buscar historiales');
+      setToastColor('danger');
+      setShowToast(true);
+    }
+  };
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar className="detalles-arriba">
-          <IonTitle>Historiales</IonTitle>
-          <UserMenu />
+          <UserMenu titulo="Historiales" />
         </IonToolbar>
       </IonHeader>
 
+
       <IonContent fullscreen className="p-4">
-        <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-2">
-          <IonButton size="default" color="tertiary" onClick={() => router.push('/tabs/tab2')}>
-            Agregar Historial Nuevo
+        <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-2">
+          {/* Botón */}
+          <IonButton
+            size="default"
+            color="tertiary"
+            onClick={() => router.push('/tabs/tab2')}
+            className="w-full md:w-auto"
+          >
+            + Agregar Historial Nuevo
           </IonButton>
-          <div className="flex items-center w-full md:w-1/2 gap-2">
-            <IonIcon icon={searchOutline} />
+
+          {/* Barra de búsqueda */}
+          <div className="flex items-center w-full md:w-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-sm px-3 py-2 gap-2 border border-gray-300">
+            <IonIcon icon={searchOutline} className="text-gray-500 text-xl" />
             <IonInput
               placeholder="Buscar por nombre de mascota"
               value={searchTerm}
               onIonChange={(e) => setSearchTerm(e.detail.value!)}
-              debounce={300} 
-              className="w-full"
+              debounce={300}
+              className="w-full text-base"
               clearInput
             />
           </div>
         </div>
+
 
         <div className="overflow-auto h-[75vh] border rounded-lg shadow-md">
           <table className="min-w-full text-sm text-left">
@@ -127,8 +136,12 @@ const searchHistoriales = async () => {
                   <td className="px-4 py-2">{historial.telefono}</td>
                   <td className="px-4 py-2">{historial.direccion}</td>
                   <td className="px-4 py-2 text-center">
-                    <IonButton size="small" fill="solid"
-                    onClick={() => router.push(`/historial/${historial.id}`)}
+                    <IonButton
+                      size="small"
+                      fill="solid"
+                      onClick={() => {
+                        window.location.href = `/historial/${historial.id}`; // esto recarga de verdad
+                      }}
                     >
                       Ver
                     </IonButton>

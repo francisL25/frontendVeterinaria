@@ -4,6 +4,7 @@ import { IonReactRouter } from '@ionic/react-router';
 import Login from './pages/Login';
 import Tab1 from './pages/Tab1';
 import Tab2 from './pages/Tab2';
+import Tab3 from './pages/Tab3'; // ✅ NUEVA IMPORTACIÓN
 import EditTab from './pages/EditTab';
 import HistorialFecha from './pages/historialFecha';
 import { AuthProvider } from './context/AuthContext';
@@ -45,6 +46,9 @@ const App: React.FC = () => (
             <Route exact path="/tabs/tab2">
               <Tab2 />
             </Route>
+            <Route exact path="/tabs/tab3/:idH">
+              <Tab3 /> {/* ✅ NUEVA RUTA DINÁMICA */}
+            </Route>
             <Route exact path="/edit-tab/:id">
               <EditTab />
             </Route>
@@ -58,7 +62,6 @@ const App: React.FC = () => (
               <Redirect to="/login" />
             </Route>
           </IonRouterOutlet>
-
         </HistorialProvider>
       </AuthProvider>
     </IonReactRouter>
