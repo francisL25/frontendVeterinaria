@@ -59,8 +59,9 @@ const Tab3: React.FC = () => {
   const [formData, setFormData] = useState(initialForm);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [toastColor, setToastColor] = useState('danger');
+  const [toastColor, setToastColor] = useState<'success' | 'danger' | 'warning'>('danger');
   const [openPicker, setOpenPicker] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (e: any) => {
     const { name, value } = e.target;
@@ -76,7 +77,15 @@ const Tab3: React.FC = () => {
     setOpenPicker('');
   };
 
+  const showToastMessage = (message: string, color: 'success' | 'danger' | 'warning') => {
+    setToastMessage(message);
+    setToastColor(color);
+    setShowToast(true);
+  };
+
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     const camposObligatorios = [
       'nombreMascota',
       'raza',
@@ -99,11 +108,11 @@ const Tab3: React.FC = () => {
     );
 
     if (camposFaltantes.length > 0) {
-      setToastMessage(`Faltan campos obligatorios: ${camposFaltantes.join(', ')}`);
-      setToastColor('danger');
-      setShowToast(true);
+      showToastMessage(`Faltan campos obligatorios: ${camposFaltantes.join(', ')}`, 'danger');
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const dataConHistorial = {
@@ -111,22 +120,20 @@ const Tab3: React.FC = () => {
         idH: idH
       };
 
+      // Crear nuevo historial por fecha
       const response = await api.post(`/historialFecha/${idH}`, dataConHistorial);
+      
       if (response.status === 201) {
-        setToastMessage('Historial por fecha creado correctamente');
-        setToastColor('success');
-        setShowToast(true);
+        showToastMessage('Historial por fecha creado correctamente', 'success');
         triggerRefetch();
         setFormData(initialForm);
       }
     } catch (error) {
-      console.error(error);
-      setToastMessage('Error al guardar el historial por fecha');
-      setToastColor('danger');
-      setShowToast(true);
+      console.error('Error al crear historial por fecha:', error);
+      showToastMessage('Error al guardar el historial por fecha', 'danger');
     }
 
-
+    // Segundo try-catch para actualizar historial
     try {
       const dataConHistorial = {
         ...formData,
@@ -134,18 +141,17 @@ const Tab3: React.FC = () => {
       };
 
       const response = await api.put(`/historial/${idH}`, dataConHistorial);
-      if (response.status === 201) {
-        setToastMessage('Historial Actualizado correctamente');
-        setToastColor('success');
-        setShowToast(true);
+      
+      if (response.status === 200 || response.status === 201) {
+        showToastMessage('Historial actualizado correctamente', 'success');
         triggerRefetch();
         setFormData(initialForm);
       }
     } catch (error) {
-      console.error(error);
-      setToastMessage('Error al guardar el historial por fecha');
-      setToastColor('danger');
-      setShowToast(true);
+      console.error('Error al actualizar historial:', error);
+      showToastMessage('Error al actualizar el historial', 'danger');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -158,235 +164,408 @@ const Tab3: React.FC = () => {
       </IonHeader>
 
       <IonContent fullscreen className="ion-padding">
-        <div className="mb-4">
-          <IonButton routerLink={`/historial/${idH}`} color="medium" >
+        <div className="mb-6">
+          <IonButton
+            routerLink={`/historial/${idH}`}
+            color="medium"
+            fill="solid"
+            className="ion-no-padding ion-align-items-center"
+          >
             ← Volver al Historial
           </IonButton>
         </div>
 
         <IonGrid>
           {/* Fila 1 */}
-          <IonRow>
-            <IonCol size="3">
-              <IonItem>
-                <IonLabel position="stacked">Nombre Mascota</IonLabel>
-                <IonInput name="nombreMascota" value={formData.nombreMascota} onIonChange={handleInputChange} />
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Nombre Mascota *</IonLabel>
+                <IonInput
+                  name="nombreMascota"
+                  value={formData.nombreMascota}
+                  onIonInput={handleInputChange}
+                  className="ion-text-wrap"
+                  clearInput
+                  required
+                />
               </IonItem>
             </IonCol>
-            <IonCol size="3">
-              <IonItem>
-                <IonLabel position="stacked">Raza</IonLabel>
-                <IonInput name="raza" value={formData.raza} onIonChange={handleInputChange} />
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Raza *</IonLabel>
+                <IonInput 
+                  name="raza" 
+                  value={formData.raza} 
+                  onIonInput={handleInputChange} 
+                  clearInput 
+                  required
+                />
               </IonItem>
             </IonCol>
-            <IonCol size="3">
-              <IonItem>
-                <IonLabel position="stacked">Especie</IonLabel>
-                <IonInput name="especie" value={formData.especie} onIonChange={handleInputChange} />
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Especie *</IonLabel>
+                <IonInput 
+                  name="especie" 
+                  value={formData.especie} 
+                  onIonInput={handleInputChange} 
+                  clearInput 
+                  required
+                />
               </IonItem>
             </IonCol>
-            <IonCol size="3">
-              <IonItem>
-                <IonLabel position="stacked">Fecha Nacimiento</IonLabel>
-                <IonButton id="fechaNacimiento" onClick={() => setOpenPicker('fechaNacimiento')} expand="block">
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300 flex flex-col" lines="none">
+                <IonLabel className="text-gray-700 font-semibold mb-1">Fecha Nacimiento *</IonLabel>
+                <IonButton
+                  id="fechaNacimiento"
+                  onClick={() => setOpenPicker('fechaNacimiento')}
+                  expand="block"
+                  fill="outline"
+                  size="small"
+                  color="primary"
+                >
                   Seleccionar Fecha
                 </IonButton>
                 {formData.fechaNacimiento && (
-                  <IonLabel>{new Date(formData.fechaNacimiento).toLocaleDateString()}</IonLabel>
+                  <IonLabel className="ion-text-center ion-margin-top text-sm text-gray-600">
+                    {new Date(formData.fechaNacimiento).toLocaleDateString()}
+                  </IonLabel>
                 )}
               </IonItem>
+
               <IonPopover
                 trigger="fechaNacimiento"
                 isOpen={openPicker === 'fechaNacimiento'}
                 onDidDismiss={() => setOpenPicker('')}
+                alignment="center"
               >
-                <IonDatetime presentation="date" onIonChange={(e) => handleDateChange('fechaNacimiento', e)} />
+                <IonDatetime
+                  presentation="date"
+                  onIonChange={(e) => handleDateChange('fechaNacimiento', e)}
+                  style={{ padding: 20 }}
+                />
               </IonPopover>
             </IonCol>
           </IonRow>
 
           {/* Fila 2 */}
-          <IonRow>
-            <IonCol size="3">
-              <IonItem>
-                <IonLabel position="stacked">Sexo</IonLabel>
-                <IonSelect name="sexo" value={formData.sexo} onIonChange={handleInputChange}>
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Sexo *</IonLabel>
+                <IonSelect 
+                  name="sexo" 
+                  value={formData.sexo} 
+                  onIonChange={handleInputChange} 
+                  interface="popover"
+                >
                   <IonSelectOption value="Macho">Macho</IonSelectOption>
                   <IonSelectOption value="Hembra">Hembra</IonSelectOption>
                 </IonSelect>
               </IonItem>
             </IonCol>
-            <IonCol size="3">
-              <IonItem>
-                <IonLabel position="stacked">Nombre Dueño</IonLabel>
-                <IonInput name="nombreDueno" value={formData.nombreDueno} onIonChange={handleInputChange} />
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Nombre Dueño *</IonLabel>
+                <IonInput 
+                  name="nombreDueno" 
+                  value={formData.nombreDueno} 
+                  onIonInput={handleInputChange} 
+                  clearInput 
+                  required
+                />
               </IonItem>
             </IonCol>
-            <IonCol size="3">
-              <IonItem>
-                <IonLabel position="stacked">Carnet Identidad</IonLabel>
-                <IonInput name="carnetIdentidad" value={formData.carnetIdentidad} onIonChange={handleInputChange} />
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Carnet Identidad *</IonLabel>
+                <IonInput 
+                  name="carnetIdentidad" 
+                  value={formData.carnetIdentidad} 
+                  onIonInput={handleInputChange} 
+                  clearInput 
+                  required
+                />
               </IonItem>
             </IonCol>
-            <IonCol size="3">
-              <IonItem>
-                <IonLabel position="stacked">Teléfono</IonLabel>
-                <IonInput name="telefono" value={formData.telefono} onIonChange={handleInputChange} />
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Teléfono *</IonLabel>
+                <IonInput 
+                  name="telefono" 
+                  value={formData.telefono} 
+                  onIonInput={handleInputChange} 
+                  clearInput 
+                  type="tel"
+                  required
+                />
               </IonItem>
             </IonCol>
           </IonRow>
 
           {/* Fila 3 */}
-          <IonRow>
+          <IonRow className="ion-margin-vertical">
             <IonCol size="12">
-              <IonItem>
-                <IonLabel position="stacked">Dirección</IonLabel>
-                <IonInput name="direccion" value={formData.direccion} onIonChange={handleInputChange} />
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Dirección *</IonLabel>
+                <IonInput 
+                  name="direccion" 
+                  value={formData.direccion} 
+                  onIonInput={handleInputChange} 
+                  clearInput 
+                  required
+                />
               </IonItem>
             </IonCol>
           </IonRow>
 
           {/* Fila 4 */}
-          <IonRow>
-            <IonCol size="6">
-              <IonItem>
-                <IonLabel position="stacked">Peso (kg)</IonLabel>
-                <IonInput name="peso" type="number" value={formData.peso} onIonChange={handleInputChange} />
+          <IonRow className="ion-margin-vertical items-center">
+            <IonCol size="12" sizeMd="6">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Peso (kg) *</IonLabel>
+                <IonInput
+                  name="peso"
+                  type="number"
+                  value={formData.peso}
+                  onIonInput={handleInputChange}
+                  clearInput
+                  step="0.1"
+                  min="0"
+                  required
+                />
               </IonItem>
             </IonCol>
-            <IonCol size="3">
-              <IonItem>
-                <IonLabel>Castrado</IonLabel>
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem lines="none" className="flex items-center gap-2 rounded-md border border-gray-300 p-2">
                 <IonCheckbox
                   checked={formData.castrado}
                   onIonChange={(e) => handleCheckboxChange('castrado', e.detail.checked)}
+                  color="primary"
                 />
+                <IonLabel className="text-gray-700 font-semibold mb-0">Castrado</IonLabel>
               </IonItem>
             </IonCol>
-            <IonCol size="3">
-              <IonItem>
-                <IonLabel>Esterilizado</IonLabel>
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem lines="none" className="flex items-center gap-2 rounded-md border border-gray-300 p-2">
                 <IonCheckbox
                   checked={formData.esterilizado}
                   onIonChange={(e) => handleCheckboxChange('esterilizado', e.detail.checked)}
+                  color="primary"
                 />
+                <IonLabel className="text-gray-700 font-semibold mb-0">Esterilizado</IonLabel>
               </IonItem>
             </IonCol>
           </IonRow>
 
           {/* Fila 5 */}
-          <IonRow>
+          <IonRow className="ion-margin-vertical">
             <IonCol size="12">
-              <IonItem>
-                <IonLabel position="stacked">Seña Particular</IonLabel>
-                <IonTextarea name="seniaParticular" value={formData.seniaParticular} onIonChange={handleInputChange} rows={2} />
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Seña Particular</IonLabel>
+                <IonTextarea
+                  name="seniaParticular"
+                  value={formData.seniaParticular}
+                  onIonInput={handleInputChange}
+                  rows={2}
+                  className="ion-text-wrap"
+                />
               </IonItem>
             </IonCol>
           </IonRow>
 
           {/* Fila 6 */}
-          <IonRow>
+          <IonRow className="ion-margin-vertical">
             <IonCol size="12">
-              <IonItem>
-                <IonLabel position="stacked">Anamnesis</IonLabel>
-                <IonTextarea name="anamnesis" value={formData.anamnesis} onIonChange={handleInputChange} rows={3} />
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Anamnesis *</IonLabel>
+                <IonTextarea
+                  name="anamnesis"
+                  value={formData.anamnesis}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                  required
+                />
               </IonItem>
             </IonCol>
           </IonRow>
 
           {/* Fila 7 */}
-          <IonRow>
+          <IonRow className="ion-margin-vertical">
             <IonCol size="12">
-              <IonItem>
-                <IonLabel position="stacked">Síntomas y Signos</IonLabel>
-                <IonTextarea name="sintomasSignos" value={formData.sintomasSignos} onIonChange={handleInputChange} rows={3} />
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Síntomas y Signos *</IonLabel>
+                <IonTextarea
+                  name="sintomasSignos"
+                  value={formData.sintomasSignos}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                  required
+                />
               </IonItem>
             </IonCol>
           </IonRow>
 
           {/* Fila 8 */}
-          <IonRow>
+          <IonRow className="ion-margin-vertical">
             <IonCol size="12">
-              <IonItem>
-                <IonLabel position="stacked">Tratamiento</IonLabel>
-                <IonTextarea name="tratamiento" value={formData.tratamiento} onIonChange={handleInputChange} rows={3} />
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Tratamiento</IonLabel>
+                <IonTextarea
+                  name="tratamiento"
+                  value={formData.tratamiento}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                />
               </IonItem>
             </IonCol>
           </IonRow>
 
           {/* Fila 9 */}
-          <IonRow>
+          <IonRow className="ion-margin-vertical">
             <IonCol size="12">
-              <IonItem>
-                <IonLabel position="stacked">Diagnóstico</IonLabel>
-                <IonTextarea name="diagnostico" value={formData.diagnostico} onIonChange={handleInputChange} rows={3} />
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Diagnóstico *</IonLabel>
+                <IonTextarea
+                  name="diagnostico"
+                  value={formData.diagnostico}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                  required
+                />
               </IonItem>
             </IonCol>
           </IonRow>
 
           {/* Fila 10 */}
-          <IonRow>
-            <IonCol size="6">
-              <IonItem>
-                <IonLabel position="stacked">Doctor Atendió</IonLabel>
-                <IonInput name="doctorAtendio" value={formData.doctorAtendio} onIonChange={handleInputChange} />
+          <IonRow className="ion-margin-vertical items-center">
+            <IonCol size="12" sizeMd="6">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Doctor Atendió</IonLabel>
+                <IonInput
+                  name="doctorAtendio"
+                  value={formData.doctorAtendio}
+                  onIonInput={handleInputChange}
+                  clearInput
+                />
               </IonItem>
             </IonCol>
-            <IonCol size="6">
-              <IonItem>
-                <IonLabel position="stacked">Cita</IonLabel>
-                <IonButton id="cita" onClick={() => setOpenPicker('cita')} expand="block">
+
+            <IonCol size="12" sizeMd="6">
+              <IonItem className="rounded-md border border-gray-300 flex flex-col" lines="none">
+                <IonLabel className="text-gray-700 font-semibold mb-1">Cita</IonLabel>
+                <IonButton
+                  id="cita"
+                  onClick={() => setOpenPicker('cita')}
+                  expand="block"
+                  fill="outline"
+                  size="small"
+                  color="primary"
+                >
                   Seleccionar Cita
                 </IonButton>
-                {formData.cita && <IonLabel>{new Date(formData.cita).toLocaleString()}</IonLabel>}
+                {formData.cita && (
+                  <IonLabel className="ion-text-center ion-margin-top text-sm text-gray-600">
+                    {new Date(formData.cita).toLocaleString()}
+                  </IonLabel>
+                )}
               </IonItem>
+
               <IonPopover
                 trigger="cita"
                 isOpen={openPicker === 'cita'}
                 onDidDismiss={() => setOpenPicker('')}
+                alignment="center"
               >
-                <IonDatetime presentation="date-time" onIonChange={(e) => handleDateChange('cita', e)} />
+                <IonDatetime
+                  presentation="date-time"
+                  onIonChange={(e) => handleDateChange('cita', e)}
+                  style={{ padding: 20 }}
+                />
               </IonPopover>
             </IonCol>
           </IonRow>
 
           {/* Fila 11 */}
-          <IonRow>
-            <IonCol size="6">
-              <IonItem>
-                <IonLabel position="stacked">Fecha Historial</IonLabel>
-                <IonButton id="fechaHistorial" onClick={() => setOpenPicker('fechaHistorial')} expand="block">
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12" sizeMd="6">
+              <IonItem className="rounded-md border border-gray-300 flex flex-col" lines="none">
+                <IonLabel className="text-gray-700 font-semibold mb-1">Fecha Historial *</IonLabel>
+                <IonButton
+                  id="fechaHistorial"
+                  onClick={() => setOpenPicker('fechaHistorial')}
+                  expand="block"
+                  fill="outline"
+                  size="small"
+                  color="primary"
+                >
                   Seleccionar Fecha
                 </IonButton>
                 {formData.fechaHistorial && (
-                  <IonLabel>{new Date(formData.fechaHistorial).toLocaleString()}</IonLabel>
+                  <IonLabel className="ion-text-center ion-margin-top text-sm text-gray-600">
+                    {new Date(formData.fechaHistorial).toLocaleString()}
+                  </IonLabel>
                 )}
               </IonItem>
+
               <IonPopover
                 trigger="fechaHistorial"
                 isOpen={openPicker === 'fechaHistorial'}
                 onDidDismiss={() => setOpenPicker('')}
+                alignment="center"
               >
-                <IonDatetime presentation="date-time" onIonChange={(e) => handleDateChange('fechaHistorial', e)} />
+                <IonDatetime
+                  presentation="date-time"
+                  onIonChange={(e) => handleDateChange('fechaHistorial', e)}
+                  style={{ padding: 20 }}
+                />
               </IonPopover>
             </IonCol>
           </IonRow>
+
+          {/* Botones Guardar y Limpiar */}
+          <IonRow className="ion-margin-top ion-justify-content-center">
+            <IonCol size="12" sizeMd="6" className="flex justify-center">
+              <IonButton 
+                expand="block" 
+                color="success" 
+                onClick={handleSubmit} 
+                disabled={isSubmitting}
+                className="ion-padding-horizontal"
+              >
+                <IonIcon slot="start" icon={checkmarkCircleOutline} />
+                {isSubmitting ? 'Guardando...' : 'Guardar'}
+              </IonButton>
+            </IonCol>
+
+            <IonCol size="12" sizeMd="6" className="flex justify-center">
+              <IonButton
+                expand="block"
+                color="medium"
+                onClick={() => setFormData(initialForm)}
+                fill="outline"
+                disabled={isSubmitting}
+                className="ion-padding-horizontal"
+              >
+                Limpiar
+              </IonButton>
+            </IonCol>
+          </IonRow>
         </IonGrid>
-
-
-        <IonRow className="ion-margin-top" justify-content-center>
-          <IonCol size="6" className="flex justify-center">
-            <IonButton expand="block" color="success" onClick={handleSubmit}>
-              <IonIcon slot="start" icon={checkmarkCircleOutline} />
-              Guardar
-            </IonButton>
-          </IonCol>
-          <IonCol size="6" className="flex justify-center">
-            <IonButton expand="block" color="medium" onClick={() => setFormData(initialForm)}>
-              Limpiar
-            </IonButton>
-          </IonCol>
-        </IonRow>
 
         <IonToast
           isOpen={showToast}
@@ -394,6 +573,7 @@ const Tab3: React.FC = () => {
           color={toastColor}
           duration={3000}
           onDidDismiss={() => setShowToast(false)}
+          position="bottom"
         />
       </IonContent>
     </IonPage>

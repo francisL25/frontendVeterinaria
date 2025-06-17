@@ -13,7 +13,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ titulo }) => {
   return (
     <div className="w-full flex items-center justify-between px-4 py-2">
       {/* Texto a la izquierda */}
-      <div className="text-white text-lg font-semibold">{titulo || ''}</div>
+      <div className="text-white text-2xl font-semibold">{titulo || ''}</div>
 
       {/* Usuario a la derecha */}
       <div className="flex items-center gap-4">

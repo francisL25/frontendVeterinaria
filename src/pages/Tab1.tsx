@@ -81,51 +81,48 @@ const Tab1: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-
-      <IonContent fullscreen className="p-4">
-        <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-2">
-          {/* Botón */}
+      <IonContent fullscreen className="p-4 bg-gray-50 dark:bg-gray-900">
+        {/* Encabezado con botón y búsqueda */}
+        <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <IonButton
-            size="default"
             color="tertiary"
             onClick={() => router.push('/tabs/tab2')}
-            className="w-full md:w-auto"
+            className="w-full md:w-auto font-medium"
           >
             + Agregar Historial Nuevo
           </IonButton>
 
-          {/* Barra de búsqueda */}
-          <div className="flex items-center w-full md:w-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-sm px-3 py-2 gap-2 border border-gray-300">
+          <div className="flex items-center w-full md:w-1/2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow px-3 py-2 gap-2">
             <IonIcon icon={searchOutline} className="text-gray-500 text-xl" />
             <IonInput
-              placeholder="Buscar por nombre de mascota"
+              placeholder="Buscar mascota, dueño, etc."
               value={searchTerm}
               onIonChange={(e) => setSearchTerm(e.detail.value!)}
               debounce={300}
-              className="w-full text-base"
+              className="w-full text-sm"
               clearInput
             />
           </div>
         </div>
 
-
-        <div className="overflow-auto h-[75vh] border rounded-lg shadow-md">
-          <table className="min-w-full text-sm text-left">
-            <thead className="bg-purple-700 text-white sticky top-0 z-10">
+        {/* Tabla */}
+        <div className="mt-6 overflow-auto h-[70vh] rounded-lg shadow-lg border border-gray-300 bg-white dark:bg-gray-800">
+          <table className="min-w-full text-sm text-left table-auto">
+            <thead className="bg-purple-700 text-white sticky top-0 z-10 text-xs uppercase tracking-wider">
               <tr>
-                <th className="px-4 py-2">#</th>
-                <th className="px-4 py-2">Nombre Mascota</th>
-                <th className="px-4 py-2">Fecha Nac.</th>
-                <th className="px-4 py-2">Nombre Dueño</th>
-                <th className="px-4 py-2">C.I.</th>
-                <th className="px-4 py-2">Teléfono</th>
-                <th className="px-4 py-2">Dirección</th>
-                <th className="px-4 py-2 text-center">Acción</th>
+                <th className="px-4 py-3">#</th>
+                <th className="px-4 py-3">Nombre Mascota</th>
+                <th className="px-4 py-3">Fecha Nac.</th>
+                <th className="px-4 py-3">Nombre Dueño</th>
+                <th className="px-4 py-3">C.I.</th>
+                <th className="px-4 py-3">Teléfono</th>
+                <th className="px-4 py-3">Dirección</th>
+                <th className="px-4 py-3 text-center">Acción</th>
               </tr>
             </thead>
             <tbody>
               {historiales.map((historial, index) => (
-                <tr key={historial.id} className="border-b hover:bg-gray-100">
+                <tr key={historial.id} className="border-b hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                   <td className="px-4 py-2">{index + 1}</td>
                   <td className="px-4 py-2">{historial.nombreMascota}</td>
                   <td className="px-4 py-2">
@@ -140,7 +137,7 @@ const Tab1: React.FC = () => {
                       size="small"
                       fill="solid"
                       onClick={() => {
-                        window.location.href = `/historial/${historial.id}`; // esto recarga de verdad
+                        window.location.href = `/historial/${historial.id}`;
                       }}
                     >
                       Ver
@@ -152,6 +149,7 @@ const Tab1: React.FC = () => {
           </table>
         </div>
 
+        {/* Toast */}
         <IonToast
           isOpen={showToast}
           onDidDismiss={() => setShowToast(false)}
@@ -161,6 +159,7 @@ const Tab1: React.FC = () => {
         />
       </IonContent>
     </IonPage>
+
   );
 };
 
