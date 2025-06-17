@@ -114,7 +114,7 @@ const DetallesHistorial: React.FC = () => {
                 <td className="px-4 py-2 border">{h.doctorAtendio}</td>
                 <td className="px-4 py-2 border text-center">
                   <IonButton size="small" fill="outline" onClick={() => abrirModal(h)}>
-                    {new Date(h.fechaNacimiento).toLocaleDateString()}
+                    {new Date(h.fechaHistorial).toLocaleDateString()}
                   </IonButton>
                 </td>
               </tr>

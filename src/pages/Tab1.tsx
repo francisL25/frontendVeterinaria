@@ -9,8 +9,9 @@ import {
   IonItem,
   IonToast,
   IonIcon,
+  IonSpinner,
 } from '@ionic/react';
-import { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { HistorialContext } from '../context/HistorialContext';
 import { useIonRouter } from '@ionic/react';
@@ -32,46 +33,85 @@ const Tab1: React.FC = () => {
   const { refetchFlag } = useContext(HistorialContext);
   const [searchTerm, setSearchTerm] = useState('');
   const [historiales, setHistoriales] = useState<Historial[]>([]);
+  const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
-  const [toastColor, setToastColor] = useState('danger');
+  const [toastColor, setToastColor] = useState<'success' | 'danger' | 'warning'>('danger');
   const router = useIonRouter();
 
-  useEffect(() => {
-    fetchHistoriales();
-  }, [refetchFlag]);
+  // Función para mostrar toast
+  const showToastMessage = useCallback((message: string, color: 'success' | 'danger' | 'warning' = 'danger') => {
+    setToastMessage(message);
+    setToastColor(color);
+    setShowToast(true);
+  }, []);
 
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      fetchHistoriales();
-    } else {
-      searchHistoriales();
-    }
-  }, [searchTerm]);
-
-  const fetchHistoriales = async () => {
+  // Función para obtener todos los historiales
+  const fetchHistoriales = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await api.get('/historial');
       setHistoriales(response.data);
     } catch (error: any) {
-      setToastMessage('Error al cargar historiales');
-      setToastColor('danger');
-      setShowToast(true);
+      console.error('Error al cargar historiales:', error);
+      showToastMessage('Error al cargar historiales');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [showToastMessage]);
 
-  const searchHistoriales = async () => {
+  // Función para buscar historiales
+  const searchHistoriales = useCallback(async () => {
+    if (searchTerm.trim() === '') {
+      fetchHistoriales();
+      return;
+    }
+
     try {
+      setLoading(true);
       const response = await api.get('/historial/search', {
-        params: { texto: searchTerm },  // Aquí cambio nombreMascota por texto
+        params: { texto: searchTerm.trim() },
       });
       setHistoriales(response.data);
     } catch (error: any) {
-      setToastMessage('Error al buscar historiales');
-      setToastColor('danger');
-      setShowToast(true);
+      console.error('Error al buscar historiales:', error);
+      showToastMessage('Error al buscar historiales');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [searchTerm, fetchHistoriales, showToastMessage]);
+
+  // Efecto para refetch cuando cambia la bandera
+  useEffect(() => {
+    fetchHistoriales();
+  }, [refetchFlag, fetchHistoriales]);
+
+  // Efecto para búsqueda con debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      searchHistoriales();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchHistoriales]);
+
+  // Función para navegar al detalle
+  const handleVerHistorial = useCallback((historialId: number) => {
+    router.push(`/historial/${historialId}`, 'forward');
+  }, [router]);
+
+  // Función para formatear fecha
+  const formatDate = useCallback((dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    } catch (error) {
+      return 'Fecha inválida';
+    }
+  }, []);
 
   return (
     <IonPage>
@@ -81,75 +121,88 @@ const Tab1: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent fullscreen className="p-4 bg-gray-50 dark:bg-gray-900">
-        {/* Encabezado con botón y búsqueda */}
-        <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <IonContent fullscreen className="p-4">
+        <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-2">
+          {/* Botón Agregar */}
           <IonButton
+            size="default"
             color="tertiary"
-            onClick={() => router.push('/tabs/tab2')}
-            className="w-full md:w-auto font-medium"
+            onClick={() => router.push('/tabs/tab2', 'forward')}
+            className="w-full md:w-auto min-w-fit"
           >
             + Agregar Historial Nuevo
           </IonButton>
 
-          <div className="flex items-center w-full md:w-1/2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow px-3 py-2 gap-2">
-            <IonIcon icon={searchOutline} className="text-gray-500 text-xl" />
+          {/* Barra de búsqueda */}
+          <div className="flex items-center w-full md:w-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-md px-3 py-2 gap-2 border border-gray-300">
+            <IonIcon icon={searchOutline} className="text-gray-500 text-xl flex-shrink-0" />
             <IonInput
-              placeholder="Buscar mascota, dueño, etc."
+              placeholder="Buscar por nombre de mascota, dueño, C.I..."
               value={searchTerm}
-              onIonChange={(e) => setSearchTerm(e.detail.value!)}
-              debounce={300}
-              className="w-full text-sm"
+              onIonInput={(e) => setSearchTerm(e.detail.value!)}
+              className="w-full text-base"
               clearInput
             />
           </div>
         </div>
 
-        {/* Tabla */}
-        <div className="mt-6 overflow-auto h-[70vh] rounded-lg shadow-lg border border-gray-300 bg-white dark:bg-gray-800">
-          <table className="min-w-full text-sm text-left table-auto">
-            <thead className="bg-purple-700 text-white sticky top-0 z-10 text-xs uppercase tracking-wider">
+        {/* Tabla con loading */}
+        <div className="overflow-auto h-[75vh] border rounded-lg shadow-md relative">
+          {loading && (
+            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-20">
+              <IonSpinner name="crescent" />
+            </div>
+          )}
+
+          <table className="min-w-full text-sm text-left">
+            <thead className="bg-purple-700 text-white sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3">#</th>
-                <th className="px-4 py-3">Nombre Mascota</th>
-                <th className="px-4 py-3">Fecha Nac.</th>
-                <th className="px-4 py-3">Nombre Dueño</th>
-                <th className="px-4 py-3">C.I.</th>
-                <th className="px-4 py-3">Teléfono</th>
-                <th className="px-4 py-3">Dirección</th>
-                <th className="px-4 py-3 text-center">Acción</th>
+                <th className="px-4 py-2">#</th>
+                <th className="px-4 py-2">Nombre Mascota</th>
+                <th className="px-4 py-2">Fecha Nac.</th>
+                <th className="px-4 py-2">Nombre Dueño</th>
+                <th className="px-4 py-2">C.I.</th>
+                <th className="px-4 py-2">Teléfono</th>
+                <th className="px-4 py-2">Dirección</th>
+                <th className="px-4 py-2 text-center">Acción</th>
               </tr>
             </thead>
             <tbody>
-              {historiales.map((historial, index) => (
-                <tr key={historial.id} className="border-b hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                  <td className="px-4 py-2">{index + 1}</td>
-                  <td className="px-4 py-2">{historial.nombreMascota}</td>
-                  <td className="px-4 py-2">
-                    {new Date(historial.fechaNacimiento).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-2">{historial.nombreDueno}</td>
-                  <td className="px-4 py-2">{historial.carnetIdentidad}</td>
-                  <td className="px-4 py-2">{historial.telefono}</td>
-                  <td className="px-4 py-2">{historial.direccion}</td>
-                  <td className="px-4 py-2 text-center">
-                    <IonButton
-                      size="small"
-                      fill="solid"
-                      onClick={() => {
-                        window.location.href = `/historial/${historial.id}`;
-                      }}
-                    >
-                      Ver
-                    </IonButton>
+              {historiales.length === 0 && !loading ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                    {searchTerm ? 'No se encontraron resultados' : 'No hay historiales registrados'}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                historiales.map((historial, index) => (
+                  <tr key={historial.id} className="border-b hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <td className="px-4 py-2">{index + 1}</td>
+                    <td className="px-4 py-2 font-medium">{historial.nombreMascota || 'N/A'}</td>
+                    <td className="px-4 py-2">{formatDate(historial.fechaNacimiento)}</td>
+                    <td className="px-4 py-2">{historial.nombreDueno || 'N/A'}</td>
+                    <td className="px-4 py-2">{historial.carnetIdentidad || 'N/A'}</td>
+                    <td className="px-4 py-2">{historial.telefono || 'N/A'}</td>
+                    <td className="px-4 py-2 max-w-xs truncate" title={historial.direccion}>
+                      {historial.direccion || 'N/A'}
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <IonButton
+                        size="small"
+                        fill="solid"
+                        color="primary"
+                        onClick={() => handleVerHistorial(historial.id)}
+                      >
+                        Ver
+                      </IonButton>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Toast */}
         <IonToast
           isOpen={showToast}
           onDidDismiss={() => setShowToast(false)}
@@ -159,7 +212,6 @@ const Tab1: React.FC = () => {
         />
       </IonContent>
     </IonPage>
-
   );
 };
 

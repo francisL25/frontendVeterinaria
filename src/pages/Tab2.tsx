@@ -93,7 +93,7 @@ const Tab2: React.FC = () => {
     const target = e.target as HTMLIonInputElement | HTMLIonSelectElement | HTMLIonTextareaElement;
     const name = target.name;
     const value = target.value as string;
-    
+
     if (name) {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -123,8 +123,7 @@ const Tab2: React.FC = () => {
       'peso',
       'anamnesis',
       'sintomasSignos',
-      'diagnostico',
-      'fechaHistorial'
+      'diagnostico'
     ];
 
     return camposObligatorios.filter(
@@ -164,11 +163,14 @@ const Tab2: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await api.post('/historial', {
+      const dataToSubmit = {
         ...formData,
-        peso: peso.toString() // Asegurar que el peso sea string si la API lo requiere
-      });
-      
+        peso: peso.toString(), // Asegurar que el peso sea string si la API lo requiere
+        fechaHistorial: new Date().toISOString() // Asigna la fecha y hora actuales
+      };
+
+      const response = await api.post('/historial', dataToSubmit);
+
       if (response.status === 201) {
         setShowSuccessModal(true);
         triggerRefetch();
@@ -260,9 +262,9 @@ const Tab2: React.FC = () => {
                 <IonLabel position="stacked" className="font-semibold text-gray-700">
                   Raza *
                 </IonLabel>
-                <IonInput 
-                  name="raza" 
-                  value={formData.raza} 
+                <IonInput
+                  name="raza"
+                  value={formData.raza}
                   onIonInput={handleInputChange}
                   placeholder="Ingrese la raza"
                   clearInput
@@ -274,9 +276,9 @@ const Tab2: React.FC = () => {
                 <IonLabel position="stacked" className="font-semibold text-gray-700">
                   Especie *
                 </IonLabel>
-                <IonSelect 
-                  name="especie" 
-                  value={formData.especie} 
+                <IonSelect
+                  name="especie"
+                  value={formData.especie}
                   onIonChange={handleInputChange}
                   placeholder="Seleccione"
                 >
@@ -293,9 +295,9 @@ const Tab2: React.FC = () => {
                 <IonLabel position="stacked" className="font-semibold text-gray-700">
                   Fecha Nacimiento *
                 </IonLabel>
-                <IonButton 
-                  id="fechaNacimiento" 
-                  fill="clear" 
+                <IonButton
+                  id="fechaNacimiento"
+                  fill="clear"
                   color="dark"
                   onClick={() => setOpenPicker('fechaNacimiento')}
                 >
@@ -323,9 +325,9 @@ const Tab2: React.FC = () => {
                 <IonLabel position="stacked" className="font-semibold text-gray-700">
                   Sexo *
                 </IonLabel>
-                <IonSelect 
-                  name="sexo" 
-                  value={formData.sexo} 
+                <IonSelect
+                  name="sexo"
+                  value={formData.sexo}
                   onIonChange={handleInputChange}
                   placeholder="Seleccione"
                 >
@@ -367,9 +369,9 @@ const Tab2: React.FC = () => {
                 <IonLabel position="stacked" className="font-semibold text-gray-700">
                   Teléfono *
                 </IonLabel>
-                <IonInput 
-                  name="telefono" 
-                  value={formData.telefono} 
+                <IonInput
+                  name="telefono"
+                  value={formData.telefono}
                   onIonInput={handleInputChange}
                   type="tel"
                   placeholder="12345678"
@@ -387,9 +389,9 @@ const Tab2: React.FC = () => {
                 <IonLabel position="stacked" className="font-semibold text-gray-700">
                   Dirección *
                 </IonLabel>
-                <IonInput 
-                  name="direccion" 
-                  value={formData.direccion} 
+                <IonInput
+                  name="direccion"
+                  value={formData.direccion}
                   onIonInput={handleInputChange}
                   placeholder="Dirección completa"
                   clearInput
@@ -542,9 +544,9 @@ const Tab2: React.FC = () => {
                 <IonLabel position="stacked" className="font-semibold text-gray-700">
                   Cita
                 </IonLabel>
-                <IonButton 
-                  id="cita" 
-                  fill="clear" 
+                <IonButton
+                  id="cita"
+                  fill="clear"
                   color="dark"
                   onClick={() => setOpenPicker('cita')}
                 >
@@ -563,41 +565,15 @@ const Tab2: React.FC = () => {
                 </IonPopover>
               </IonItem>
             </IonCol>
-            <IonCol size="12" sizeMd="4">
-              <IonItem className="rounded-lg border border-gray-300 shadow-sm" lines="none">
-                <IonLabel position="stacked" className="font-semibold text-gray-700">
-                  Fecha Historial *
-                </IonLabel>
-                <IonButton 
-                  id="fechaHistorial" 
-                  fill="clear" 
-                  color="dark"
-                  onClick={() => setOpenPicker('fechaHistorial')}
-                >
-                  {formData.fechaHistorial ? formatDateTime(formData.fechaHistorial) : 'Seleccionar Fecha'}
-                </IonButton>
-                <IonPopover
-                  trigger="fechaHistorial"
-                  isOpen={openPicker === 'fechaHistorial'}
-                  onDidDismiss={() => setOpenPicker('')}
-                >
-                  <IonDatetime
-                    presentation="date-time"
-                    max={new Date().toISOString()}
-                    onIonChange={(e) => handleDateChange('fechaHistorial', e)}
-                  />
-                </IonPopover>
-              </IonItem>
-            </IonCol>
           </IonRow>
         </IonGrid>
 
         {/* Botones de acción */}
         <IonRow className="ion-margin-top">
           <IonCol size="12" sizeMd="6">
-            <IonButton 
-              expand="block" 
-              color="success" 
+            <IonButton
+              expand="block"
+              color="success"
               onClick={handleSubmit}
               disabled={isSubmitting}
             >
@@ -606,9 +582,9 @@ const Tab2: React.FC = () => {
             </IonButton>
           </IonCol>
           <IonCol size="12" sizeMd="6">
-            <IonButton 
-              expand="block" 
-              color="medium" 
+            <IonButton
+              expand="block"
+              color="medium"
               onClick={handleClearForm}
               disabled={isSubmitting}
             >
@@ -627,8 +603,8 @@ const Tab2: React.FC = () => {
             <div className="flex items-center justify-center h-full">
               <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
                 <IonText color="success" className="block mb-4">
-                  <IonIcon 
-                    icon={checkmarkCircleOutline} 
+                  <IonIcon
+                    icon={checkmarkCircleOutline}
                     className="text-6xl text-green-500 mb-4"
                   />
                   <h2 className="text-2xl font-bold">¡Historial creado correctamente!</h2>
