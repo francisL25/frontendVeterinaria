@@ -82,3 +82,124 @@
   --background: #820aad;
   color: white;
 }
+
+/* Login.css */
+
+/* Contenedor principal */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  background: linear-gradient(to bottom, #f3e8ff, #ffffff);
+}
+
+/* Tarjeta de login */
+.login-card {
+  background: white;
+  border: 2px solid #a855f7;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 1rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 28rem;
+  margin: 1rem;
+}
+
+/* Icono de login */
+.login-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.login-icon ion-icon {
+  color: #7c3aed;
+  font-size: 4rem;
+}
+
+/* Títulos */
+.login-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+  color: #7c3aed;
+  margin-bottom: 0.5rem;
+}
+
+.login-subtitle {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+}
+
+/* Items de input */
+.login-input-item {
+  margin-bottom: 1rem;
+  --background: transparent;
+  --border-color: transparent;
+}
+
+.login-input-item ion-input {
+  --background: #f9fafb;
+  --border-radius: 0.5rem;
+  --padding-start: 1rem;
+  --padding-end: 1rem;
+}
+
+/* Contenedor del botón */
+.login-button-container {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+/* Botón de login */
+.login-button {
+  --background: #7c3aed;
+  --background-hover: #6d28d9;
+  --color: white;
+  --border-radius: 0.5rem;
+  --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.login-button:hover {
+  --background: #6d28d9;
+  transform: translateY(-1px);
+}
+
+.login-button:disabled {
+  --background: #d1d5db;
+  --color: #9ca3af;
+  transform: none;
+}
+
+/* Toolbar personalizado */
+.detalles-arriba {
+  --background: #7c3aed;
+  --color: white;
+}
+
+.custom-title {
+  font-weight: bold;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .login-card {
+    margin: 0.5rem;
+    padding: 1.5rem;
+  }
+  
+  .login-title {
+    font-size: 1.25rem;
+  }
+  
+  .custom-title {
+    font-size: 1rem;
+  }
+}

@@ -9,7 +9,6 @@ import {
   IonInput,
   IonButton,
   IonItem,
-  IonLabel,
   IonToast,
   IonIcon
 } from '@ionic/react';
@@ -22,18 +21,36 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
   const { login } = useContext(AuthContext);
   const history = useHistory();
 
   const handleLogin = async () => {
+    // Validación básica
+    if (!usuario.trim() || !password.trim()) {
+      setToastMessage('Por favor complete todos los campos');
+      setShowToast(true);
+      return;
+    }
+
+    setIsLoading(true);
     try {
       await login(usuario, password);
       history.push('/tabs/tab1');
     } catch (error: any) {
-      setToastMessage(error.message);
+      setToastMessage(error.message || 'Error al iniciar sesión');
       setShowToast(true);
       setUsuario('');
       setPassword('');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      handleLogin();
     }
   };
 
@@ -41,62 +58,65 @@ const Login: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar className="detalles-arriba">
-          <IonTitle className="custom-title text-center"><h1>CLÍNICA VETERINARIA QUERUBINES</h1></IonTitle>
+          <IonTitle className="custom-title">
+            CLÍNICA VETERINARIA QUERUBINES
+          </IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent fullscreen className="ion-padding bg-gradient-to-b from-purple-100 to-white">
-        <div className="flex flex-col items-center justify-center min-h-[80vh]">
-
-          {/* Tarjeta con borde morado */}
-          <div className="bg-white border-2 border-purple-500 shadow-xl rounded-2xl p-8 w-full max-w-md">
-
-            <div className="flex justify-center mb-4">
-              <IonIcon icon={personCircleSharp} className="text-purple-600 text-6xl" />
+      
+      <IonContent fullscreen className="ion-padding">
+        <div className="login-container">
+          {/* Tarjeta de login */}
+          <div className="login-card">
+            <div className="login-icon">
+              <IonIcon icon={personCircleSharp} />
             </div>
 
-            <h1 className="text-2xl font-bold text-center text-purple-700 mb-2">
-              Bienvenido
-            </h1>
-            <p className="text-center text-gray-500 mb-6">
+            <h1 className="login-title">Bienvenido</h1>
+            <p className="login-subtitle">
               Por favor, ingresa tus credenciales
             </p>
 
-            <IonItem lines="none" className="mb-4">
+            <IonItem lines="none" className="login-input-item">
               <IonInput
                 fill="solid"
                 label="Usuario"
                 labelPlacement="floating"
                 placeholder="Introduzca su usuario"
                 value={usuario}
-                onIonChange={(e) => setUsuario(e.detail.value!)}
+                onIonInput={(e) => setUsuario(e.detail.value!)}
+                onKeyDown={handleKeyPress}
                 type="text"
                 required
+                disabled={isLoading}
               />
             </IonItem>
 
-            <IonItem lines="none" className="mb-6">
+            <IonItem lines="none" className="login-input-item">
               <IonInput
                 fill="solid"
-
                 label="Contraseña"
                 labelPlacement="floating"
                 placeholder="Introduzca su contraseña"
                 value={password}
-                onIonChange={(e) => setPassword(e.detail.value!)}
+                onIonInput={(e) => setPassword(e.detail.value!)}
+                onKeyDown={handleKeyPress}
                 type="password"
                 required
+                disabled={isLoading}
               />
             </IonItem>
-            <div className="ion-text-center">
+
+            <div className="login-button-container">
               <IonButton
-                fill="clear"
-                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md transition duration-300"
+                expand="block"
+                className="login-button"
                 onClick={handleLogin}
+                disabled={isLoading}
               >
-                Iniciar Sesión
+                {isLoading ? 'Iniciando...' : 'Iniciar Sesión'}
               </IonButton>
             </div>
-
           </div>
         </div>
 
@@ -108,8 +128,6 @@ const Login: React.FC = () => {
           color="danger"
         />
       </IonContent>
-
-
     </IonPage>
   );
 };
