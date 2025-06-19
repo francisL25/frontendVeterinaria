@@ -20,7 +20,7 @@ import {
   IonToast,
   IonIcon,
 } from '@ionic/react';
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { HistorialContext } from '../context/HistorialContext';
@@ -62,6 +62,42 @@ const Tab3: React.FC = () => {
   const [toastColor, setToastColor] = useState<'success' | 'danger' | 'warning'>('danger');
   const [openPicker, setOpenPicker] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [datosFijos, setDatosFijos] = useState({});
+
+
+useEffect(() => {
+  const obtenerUltimoHistorial = async () => {
+    try {
+      const response = await api.get(`/historialFecha/ultimo/${idH}`);
+      const historial = response.data;
+
+      const camposFijos = {
+        nombreMascota: historial.nombreMascota || '',
+        raza: historial.raza || '',
+        especie: historial.especie || '',
+        fechaNacimiento: historial.fechaNacimiento || '',
+        sexo: historial.sexo || '',
+        nombreDueno: historial.nombreDueno || '',
+        carnetIdentidad: historial.carnetIdentidad || '',
+        telefono: historial.telefono || '',
+        direccion: historial.direccion || '',
+        peso: historial.peso || '',
+        castrado: historial.castrado || false,
+        esterilizado: historial.esterilizado || false
+      };
+
+      setDatosFijos(camposFijos); // Guardamos datos para restaurarlos luego
+      setFormData(prev => ({ ...prev, ...camposFijos }));
+    } catch (error) {
+      console.error('No se pudo cargar historial anterior:', error);
+      showToastMessage('No se pudo cargar datos anteriores', 'warning');
+    }
+  };
+
+  obtenerUltimoHistorial();
+}, [idH]);
+
+
 
   const handleInputChange = (e: any) => {
     const { name, value } = e.target;
@@ -100,7 +136,6 @@ const Tab3: React.FC = () => {
       'anamnesis',
       'sintomasSignos',
       'diagnostico'
-      // Nota: Eliminamos 'fechaHistorial' de los campos obligatorios porque se asignará automáticamente
     ];
 
     const camposFaltantes = camposObligatorios.filter(
@@ -112,16 +147,42 @@ const Tab3: React.FC = () => {
       return;
     }
 
+    // Validar formato de teléfono
+    if (!/^\d{7,8}$/.test(formData.telefono)) {
+      showToastMessage('El teléfono debe tener 7 u 8 dígitos numéricos', 'danger');
+      return;
+    }
+
+    // Validar peso
+    const peso = parseFloat(formData.peso);
+    if (isNaN(peso) || peso <= 0) {
+      showToastMessage('El peso debe ser un número válido mayor a 0', 'danger');
+      return;
+    }
+
+    // Validar fecha de cita
+    if (formData.cita) {
+      const citaDate = new Date(formData.cita);
+      const now = new Date();
+      if (isNaN(citaDate.getTime())) {
+        showToastMessage('La fecha de la cita no es válida', 'danger');
+        return;
+      }
+      if (citaDate < now) {
+        showToastMessage('La fecha de la cita no puede ser anterior a la fecha actual', 'danger');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
       const dataConHistorial = {
         ...formData,
         idH: idH,
-        fechaHistorial: new Date().toISOString() // Asigna la fecha y hora actuales en formato ISO
+        fechaHistorial: new Date().toISOString()
       };
 
-      // Crear nuevo historial por fecha
       const response = await api.post(`/historialFecha/${idH}`, dataConHistorial);
 
       if (response.status === 201) {
@@ -134,12 +195,11 @@ const Tab3: React.FC = () => {
       showToastMessage('Error al guardar el historial por fecha', 'danger');
     }
 
-    // Segundo try-catch para actualizar historial
     try {
       const dataConHistorial = {
         ...formData,
         idH: idH,
-        fechaHistorial: new Date().toISOString() // Asigna la fecha y hora actuales en formato ISO
+        fechaHistorial: new Date().toISOString()
       };
 
       const response = await api.put(`/historial/${idH}`, dataConHistorial);
@@ -156,6 +216,7 @@ const Tab3: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
   return (
     <IonPage>
       <IonHeader>
@@ -467,42 +528,19 @@ const Tab3: React.FC = () => {
             </IonCol>
 
             <IonCol size="12" sizeMd="6">
-              <IonItem className="rounded-md border border-gray-300 flex flex-col" lines="none">
-                <IonLabel className="text-gray-700 font-semibold mb-1">Cita</IonLabel>
-                <IonButton
-                  id="cita"
-                  onClick={() => setOpenPicker('cita')}
-                  expand="block"
-                  fill="outline"
-                  size="small"
-                  color="primary"
-                >
-                  Seleccionar Cita
-                </IonButton>
-                {formData.cita && (
-                  <IonLabel className="ion-text-center ion-margin-top text-sm text-gray-600">
-                    {new Date(formData.cita).toLocaleString()}
-                  </IonLabel>
-                )}
-              </IonItem>
-
-              <IonPopover
-                trigger="cita"
-                isOpen={openPicker === 'cita'}
-                onDidDismiss={() => setOpenPicker('')}
-                alignment="center"
-              >
-                <IonDatetime
-                  presentation="date-time"
-                  onIonChange={(e) => handleDateChange('cita', e)}
-                  style={{ padding: 20 }}
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Cita</IonLabel>
+                <IonInput
+                  name="cita"
+                  value={formData.cita}
+                  onIonInput={handleInputChange}
+                  type="datetime-local"
+                  placeholder="YYYY-MM-DD HH:mm"
+                  clearInput
                 />
-              </IonPopover>
+              </IonItem>
             </IonCol>
           </IonRow>
-
-          {/* Fila 11 */}
-
 
           {/* Botones Guardar y Limpiar */}
           <IonRow className="ion-margin-top ion-justify-content-center">

@@ -138,6 +138,18 @@ const Tab2: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    if (formData.cita) {
+  const citaDate = new Date(formData.cita);
+  const now = new Date();
+  if (isNaN(citaDate.getTime())) {
+    showToastMessage('La fecha de la cita no es válida');
+    return;
+  }
+  if (citaDate < now) {
+    showToastMessage('La fecha de la cita no puede ser anterior a la fecha actual');
+    return;
+  }
+}
     if (isSubmitting) return;
 
     const camposFaltantes = validateForm();
@@ -373,10 +385,9 @@ const Tab2: React.FC = () => {
                   name="telefono"
                   value={formData.telefono}
                   onIonInput={handleInputChange}
-                  type="tel"
-                  placeholder="12345678"
-                  maxlength={8}
                   clearInput
+                  type="tel"
+                  required
                 />
               </IonItem>
             </IonCol>
@@ -539,30 +550,33 @@ const Tab2: React.FC = () => {
                 />
               </IonItem>
             </IonCol>
+<IonCol size="12" sizeMd="4">
+  <IonItem className="rounded-lg border border-gray-300 shadow-sm" lines="none">
+    <IonLabel position="stacked" className="font-semibold text-gray-700">
+      Cita
+    </IonLabel>
+    <IonInput
+      name="cita"
+      value={formData.cita}
+      onIonInput={handleInputChange}
+      type="datetime-local"
+      placeholder="YYYY-MM-DD HH:mm"
+      clearInput
+    />
+  </IonItem>
+</IonCol>
             <IonCol size="12" sizeMd="4">
               <IonItem className="rounded-lg border border-gray-300 shadow-sm" lines="none">
                 <IonLabel position="stacked" className="font-semibold text-gray-700">
-                  Cita
+                  Fecha Historial *
                 </IonLabel>
-                <IonButton
-                  id="cita"
-                  fill="clear"
-                  color="dark"
-                  onClick={() => setOpenPicker('cita')}
-                >
-                  {formData.cita ? formatDateTime(formData.cita) : 'Seleccionar Cita'}
-                </IonButton>
-                <IonPopover
-                  trigger="cita"
-                  isOpen={openPicker === 'cita'}
-                  onDidDismiss={() => setOpenPicker('')}
-                >
-                  <IonDatetime
-                    presentation="date-time"
-                    min={new Date().toISOString()}
-                    onIonChange={(e) => handleDateChange('cita', e)}
-                  />
-                </IonPopover>
+                <IonInput
+                  name="fechaHistorial"
+                  value={formatDateTime(new Date().toISOString())}
+                  readonly
+                  placeholder="Fecha actual"
+                  className="ion-text-wrap"
+                />
               </IonItem>
             </IonCol>
           </IonRow>
@@ -594,34 +608,6 @@ const Tab2: React.FC = () => {
         </IonRow>
 
         {/* Modal de confirmación de éxito */}
-        <IonModal
-          isOpen={showSuccessModal}
-          onDidDismiss={() => setShowSuccessModal(false)}
-          backdropDismiss={false}
-        >
-          <IonContent className="ion-padding">
-            <div className="flex items-center justify-center h-full">
-              <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
-                <IonText color="success" className="block mb-4">
-                  <IonIcon
-                    icon={checkmarkCircleOutline}
-                    className="text-6xl text-green-500 mb-4"
-                  />
-                  <h2 className="text-2xl font-bold">¡Historial creado correctamente!</h2>
-                </IonText>
-                <p className="text-gray-600 mb-6">Serás redirigido en unos segundos...</p>
-                <IonButton
-                  expand="block"
-                  color="success"
-                  onClick={closeSuccessModal}
-                  className="font-semibold"
-                >
-                  Ir al listado
-                </IonButton>
-              </div>
-            </div>
-          </IonContent>
-        </IonModal>
 
         {/* Toast para mensajes */}
         <IonToast
