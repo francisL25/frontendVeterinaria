@@ -42,8 +42,6 @@ interface HistorialFecha {
 
 const DetallesHistorial: React.FC = () => {
   const { id: idH } = useParams<{ id: string }>();
-  const { nombre, logout } = useContext(AuthContext);
-
   const [historialesFecha, setHistorialesFecha] = useState<HistorialFecha[]>([]);
   console.log(historialesFecha)
   const [toastMessage, setToastMessage] = useState('');

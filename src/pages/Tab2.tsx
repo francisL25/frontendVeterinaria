@@ -52,6 +52,8 @@ interface FormData {
   cita: string;
   doctorAtendio: string;
   fechaHistorial: string;
+  receta: string;
+  recomendacion: string;
 }
 
 const Tab2: React.FC = () => {
@@ -134,7 +136,9 @@ const Tab2: React.FC = () => {
     diagnostico: '',
     cita: '',
     doctorAtendio: nombre || '', // Usar el nombre del contexto como valor por defecto
-    fechaHistorial: ''
+    fechaHistorial: '',
+    receta: '',
+    recomendacion: '',
   };
 
   const [formData, setFormData] = useState<FormData>(initialForm);
@@ -306,6 +310,8 @@ const Tab2: React.FC = () => {
         sintomasSignos: formData.sintomasSignos.trim(),
         tratamiento: formData.tratamiento.trim(),
         diagnostico: formData.diagnostico.trim(),
+        receta: formData.receta.trim(),
+        recomendacion: formData.recomendacion.trim()
       };
 
       // Realizar petición al backend
@@ -435,7 +441,7 @@ const Tab2: React.FC = () => {
       </IonHeader>
 
       <IonContent fullscreen className="ion-padding">
-        <div  className="mb-4">
+        <div className="mb-4">
           <IonButton routerLink="/tabs/tab1" color="medium">
             ← Volver
           </IonButton>
@@ -762,6 +768,42 @@ const Tab2: React.FC = () => {
                   rows={3}
                   maxlength={1000}
                   placeholder="Diagnóstico veterinario..."
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          <IonRow>
+            <IonCol size="12">
+              <IonItem className="rounded-lg border border-gray-300 shadow-sm" lines="none">
+                <IonLabel position="stacked" className="font-semibold text-gray-700">
+                  Receta *
+                </IonLabel>
+                <IonTextarea
+                  name="receta"
+                  value={formData.receta}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  maxlength={1000}
+                  placeholder="Receta veterinario..."
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          <IonRow>
+            <IonCol size="12">
+              <IonItem className="rounded-lg border border-gray-300 shadow-sm" lines="none">
+                <IonLabel position="stacked" className="font-semibold text-gray-700">
+                  Recomendación *
+                </IonLabel>
+                <IonTextarea
+                  name="recomendacion"
+                  value={formData.recomendacion}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  maxlength={1000}
+                  placeholder="Recomendación veterinario..."
                 />
               </IonItem>
             </IonCol>

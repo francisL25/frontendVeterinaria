@@ -86,7 +86,9 @@ const Tab3: React.FC = () => {
     diagnostico: '',
     cita: '',
     doctorAtendio: '',
-    fechaHistorial: ''
+    fechaHistorial: '',
+    receta: '',
+    recomendacion: ''
   };
 
   const [edadAnio, setEdadAnio] = useState<number | null>(null);
@@ -181,7 +183,9 @@ const Tab3: React.FC = () => {
       'peso',
       'anamnesis',
       'sintomasSignos',
-      'diagnostico'
+      'diagnostico',
+      'receta',
+      'recomendacion'
     ];
 
     const camposFaltantes = camposObligatorios.filter(
@@ -572,6 +576,38 @@ const Tab3: React.FC = () => {
                 <IonTextarea
                   name="diagnostico"
                   value={formData.diagnostico}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                  required
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Receta *</IonLabel>
+                <IonTextarea
+                  name="receta"
+                  value={formData.receta}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                  required
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Recomendación *</IonLabel>
+                <IonTextarea
+                  name="recomendacion"
+                  value={formData.recomendacion}
                   onIonInput={handleInputChange}
                   rows={3}
                   className="ion-text-wrap"
