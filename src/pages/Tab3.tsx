@@ -28,6 +28,39 @@ import { checkmarkCircleOutline } from 'ionicons/icons';
 import api from '../services/api';
 import UserMenu from '../components/UserMenu';
 
+function edadTextoAFecha(edad: string): string {
+  const match = edad.match(/(?:(\d+)\s*años?)?\s*(?:(\d+)\s*mes(?:es)?)?/i);
+  if (!match) return '';
+
+  const anios = parseInt(match[1] ?? '0');
+  const meses = parseInt(match[2] ?? '0');
+
+  const fecha = new Date();
+  fecha.setFullYear(fecha.getFullYear() - anios);
+  fecha.setMonth(fecha.getMonth() - meses);
+
+  return fecha.toISOString().split('T')[0]; // YYYY-MM-DD
+}
+
+function calcularEdadStr(fechaNacimientoStr: string): string {
+  const hoy = new Date();
+  const fechaNacimiento = new Date(fechaNacimientoStr);
+
+  let anios = hoy.getFullYear() - fechaNacimiento.getFullYear();
+  let meses = hoy.getMonth() - fechaNacimiento.getMonth();
+
+  if (meses < 0 || (meses === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+    anios--;
+    meses += 12;
+  }
+
+  if (hoy.getDate() < fechaNacimiento.getDate()) {
+    meses--;
+  }
+
+  return `${anios} año${anios !== 1 ? 's' : ''} y ${meses} mes${meses !== 1 ? 'es' : ''}`;
+}
+
 const Tab3: React.FC = () => {
   const { idH } = useParams<{ idH: string }>();
   const { nombre } = useContext(AuthContext);
@@ -56,6 +89,8 @@ const Tab3: React.FC = () => {
     fechaHistorial: ''
   };
 
+  const [edadAnio, setEdadAnio] = useState<number | null>(null);
+  const [edadMes, setEdadMes] = useState<number | null>(null);
   const [formData, setFormData] = useState(initialForm);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -64,40 +99,51 @@ const Tab3: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [datosFijos, setDatosFijos] = useState({});
 
+  useEffect(() => {
+    const obtenerUltimoHistorial = async () => {
+      try {
+        const response = await api.get(`/historialFecha/ultimo/${idH}`);
+        const historial = response.data;
+        const fecha = calcularEdadStr(historial.fechaNacimiento);
+        console.log(fecha)
+        const camposFijos = {
+          nombreMascota: historial.nombreMascota || '',
+          raza: historial.raza || '',
+          especie: historial.especie || '',
+          fechaNacimiento: fecha || '',
+          sexo: historial.sexo || '',
+          nombreDueno: historial.nombreDueno || '',
+          carnetIdentidad: historial.carnetIdentidad || '',
+          telefono: historial.telefono || '',
+          direccion: historial.direccion || '',
+          peso: historial.peso || '',
+          castrado: historial.castrado || false,
+          esterilizado: historial.esterilizado || false
+        };
 
-useEffect(() => {
-  const obtenerUltimoHistorial = async () => {
-    try {
-      const response = await api.get(`/historialFecha/ultimo/${idH}`);
-      const historial = response.data;
+        setDatosFijos(camposFijos);
+        setFormData(prev => ({ ...prev, ...camposFijos }));
+      } catch (error) {
+        console.error('No se pudo cargar historial anterior:', error);
+        showToastMessage('No se pudo cargar datos anteriores', 'warning');
+      }
+    };
 
-      const camposFijos = {
-        nombreMascota: historial.nombreMascota || '',
-        raza: historial.raza || '',
-        especie: historial.especie || '',
-        fechaNacimiento: historial.fechaNacimiento || '',
-        sexo: historial.sexo || '',
-        nombreDueno: historial.nombreDueno || '',
-        carnetIdentidad: historial.carnetIdentidad || '',
-        telefono: historial.telefono || '',
-        direccion: historial.direccion || '',
-        peso: historial.peso || '',
-        castrado: historial.castrado || false,
-        esterilizado: historial.esterilizado || false
-      };
-
-      setDatosFijos(camposFijos); // Guardamos datos para restaurarlos luego
-      setFormData(prev => ({ ...prev, ...camposFijos }));
-    } catch (error) {
-      console.error('No se pudo cargar historial anterior:', error);
-      showToastMessage('No se pudo cargar datos anteriores', 'warning');
+    if (idH) {
+      obtenerUltimoHistorial();
     }
-  };
+  }, [idH]);
 
-  obtenerUltimoHistorial();
-}, [idH]);
+  useEffect(() => {
+    let texto = '';
+    if (edadAnio) texto += `${edadAnio} año${edadAnio > 1 ? 's' : ''}`;
+    if (edadMes) texto += (texto ? ' ' : '') + `${edadMes} mes${edadMes > 1 ? 'es' : ''}`;
 
-
+    setFormData(prev => ({
+      ...prev,
+      fechaNacimiento: texto.trim(),
+    }));
+  }, [edadAnio, edadMes]);
 
   const handleInputChange = (e: any) => {
     const { name, value } = e.target;
@@ -177,44 +223,85 @@ useEffect(() => {
     setIsSubmitting(true);
 
     try {
+      const fechaNacimientoEstimada = edadTextoAFecha(formData.fechaNacimiento);
+
       const dataConHistorial = {
         ...formData,
+        fechaNacimiento: fechaNacimientoEstimada,
         idH: idH,
         fechaHistorial: new Date().toISOString()
       };
 
-      const response = await api.post(`/historialFecha/${idH}`, dataConHistorial);
+      // Ejecutar ambas operaciones en paralelo
+      const [historialFechaResponse, historialResponse] = await Promise.allSettled([
+        api.post(`/historialFecha/${idH}`, dataConHistorial),
+        api.put(`/historial/${idH}`, dataConHistorial)
+      ]);
 
-      if (response.status === 201) {
-        showToastMessage('Historial por fecha creado correctamente', 'success');
-        triggerRefetch();
-        setFormData(initialForm);
+      let hasError = false;
+      let successMessages = [];
+
+      // Verificar resultado del historial por fecha
+      if (historialFechaResponse.status === 'fulfilled' &&
+        historialFechaResponse.value.status === 201) {
+        successMessages.push('Historial por fecha creado correctamente');
+      } else {
+        console.error('Error al crear historial por fecha:', historialFechaResponse);
+        hasError = true;
       }
-    } catch (error) {
-      console.error('Error al crear historial por fecha:', error);
-      showToastMessage('Error al guardar el historial por fecha', 'danger');
-    }
 
-    try {
-      const dataConHistorial = {
-        ...formData,
-        idH: idH,
-        fechaHistorial: new Date().toISOString()
-      };
-
-      const response = await api.put(`/historial/${idH}`, dataConHistorial);
-
-      if (response.status === 200 || response.status === 201) {
-        showToastMessage('Historial actualizado correctamente', 'success');
-        triggerRefetch();
-        setFormData(initialForm);
+      // Verificar resultado del historial principal
+      if (historialResponse.status === 'fulfilled' &&
+        (historialResponse.value.status === 200 || historialResponse.value.status === 201)) {
+        successMessages.push('Historial actualizado correctamente');
+      } else {
+        console.error('Error al actualizar historial:', historialResponse);
+        hasError = true;
       }
-    } catch (error) {
-      console.error('Error al actualizar historial:', error);
-      showToastMessage('Error al actualizar el historial', 'danger');
+
+      if (successMessages.length > 0) {
+        showToastMessage(successMessages.join(' y '), 'success');
+
+        // Disparar refetch del contexto
+        if (triggerRefetch) {
+          triggerRefetch();
+        }
+
+        // Limpiar formulario - restaurar solo los datos fijos
+        setFormData({
+          ...initialForm,
+          ...datosFijos
+        });
+
+        // Limpiar selectores de edad
+        setEdadAnio(null);
+        setEdadMes(null);
+      }
+
+      if (hasError) {
+        showToastMessage('Error parcial al guardar algunos datos', 'warning');
+      }
+
+    } catch (error: any) {
+      console.error('Error general al guardar:', error);
+
+      // Mostrar mensaje de error más específico
+      const errorMessage = error?.response?.data?.message ||
+        error?.message ||
+        'Error desconocido al guardar';
+
+      showToastMessage(`Error al guardar: ${errorMessage}`, 'danger');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleLimpiarFormulario = () => {
+    // Restaurar solo los datos fijos, limpiar los campos médicos
+    setFormData({
+      ...initialForm,
+      ...datosFijos
+    });
   };
 
   return (
@@ -282,37 +369,18 @@ useEffect(() => {
 
             <IonCol size="12" sizeMd="3">
               <IonItem className="rounded-md border border-gray-300 flex flex-col" lines="none">
-                <IonLabel className="text-gray-700 font-semibold mb-1">Fecha Nacimiento *</IonLabel>
-                <IonButton
-                  id="fechaNacimiento"
-                  onClick={() => setOpenPicker('fechaNacimiento')}
-                  expand="block"
-                  fill="outline"
-                  size="small"
-                  color="primary"
-                >
-                  Seleccionar Fecha
-                </IonButton>
+                <IonLabel className="text-gray-700 font-semibold mb-1">
+                  Edad *
+                </IonLabel>
+
                 {formData.fechaNacimiento && (
-                  <IonLabel className="ion-text-center ion-margin-top text-sm text-gray-600">
-                    {new Date(formData.fechaNacimiento).toLocaleDateString()}
+                  <IonLabel className="ion-margin-top text-sm text-gray-600">
+                    {formData.fechaNacimiento}
                   </IonLabel>
                 )}
               </IonItem>
-
-              <IonPopover
-                trigger="fechaNacimiento"
-                isOpen={openPicker === 'fechaNacimiento'}
-                onDidDismiss={() => setOpenPicker('')}
-                alignment="center"
-              >
-                <IonDatetime
-                  presentation="date"
-                  onIonChange={(e) => handleDateChange('fechaNacimiento', e)}
-                  style={{ padding: 20 }}
-                />
-              </IonPopover>
             </IonCol>
+
           </IonRow>
 
           {/* Fila 2 */}
@@ -528,17 +596,42 @@ useEffect(() => {
             </IonCol>
 
             <IonCol size="12" sizeMd="6">
-              <IonItem className="rounded-md border border-gray-300" lines="none">
-                <IonLabel position="stacked" className="text-gray-700 font-semibold">Cita</IonLabel>
-                <IonInput
-                  name="cita"
-                  value={formData.cita}
-                  onIonInput={handleInputChange}
-                  type="datetime-local"
-                  placeholder="YYYY-MM-DD HH:mm"
-                  clearInput
-                />
+              <IonItem className="rounded-md border border-gray-300 flex flex-col" lines="none">
+                <IonLabel className="text-gray-700 font-semibold mb-1">
+                  Cita
+                </IonLabel>
+
+                <IonButton
+                  id="citaPicker"
+                  onClick={() => setOpenPicker('cita')}
+                  expand="block"
+                  fill="outline"
+                  size="small"
+                  color="primary"
+                >
+                  Seleccionar Fecha y Hora
+                </IonButton>
+
+                {formData.cita && (
+                  <IonLabel className="ion-text-center ion-margin-top text-sm text-gray-600">
+                    {new Date(formData.cita).toLocaleString()}
+                  </IonLabel>
+                )}
               </IonItem>
+
+              <IonPopover
+                trigger="citaPicker"
+                isOpen={openPicker === 'cita'}
+                onDidDismiss={() => setOpenPicker('')}
+                alignment="center"
+              >
+                <IonDatetime
+                  presentation="date-time"
+                  onIonChange={(e) => handleDateChange('cita', e)}
+                  style={{ padding: 20 }}
+                  showDefaultButtons={true}
+                />
+              </IonPopover>
             </IonCol>
           </IonRow>
 
@@ -561,7 +654,7 @@ useEffect(() => {
               <IonButton
                 expand="block"
                 color="medium"
-                onClick={() => setFormData(initialForm)}
+                onClick={handleLimpiarFormulario}
                 fill="outline"
                 disabled={isSubmitting}
                 className="ion-padding-horizontal"

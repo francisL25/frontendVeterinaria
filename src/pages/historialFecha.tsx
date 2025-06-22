@@ -36,6 +36,8 @@ interface HistorialFecha {
   cita: string;
   doctorAtendio: string;
   fechaHistorial: string;
+  receta: string;
+  recomendacion: string;
 }
 
 const DetallesHistorial: React.FC = () => {
@@ -43,6 +45,7 @@ const DetallesHistorial: React.FC = () => {
   const { nombre, logout } = useContext(AuthContext);
 
   const [historialesFecha, setHistorialesFecha] = useState<HistorialFecha[]>([]);
+  console.log(historialesFecha)
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastColor, setToastColor] = useState<'success' | 'danger'>('success');
@@ -114,7 +117,7 @@ const DetallesHistorial: React.FC = () => {
                 <td className="px-4 py-2 border">{h.doctorAtendio}</td>
                 <td className="px-4 py-2 border text-center">
                   <IonButton size="small" fill="outline" onClick={() => abrirModal(h)}>
-                    {new Date(h.fechaHistorial).toLocaleDateString()}
+                    {new Date(h.fechaHistorial).toLocaleString()}
                   </IonButton>
                 </td>
               </tr>

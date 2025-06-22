@@ -97,8 +97,8 @@ const Tab1: React.FC = () => {
 
   // Función para navegar al detalle
   const handleVerHistorial = useCallback((historialId: number) => {
-    router.push(`/historial/${historialId}`, 'forward');
-  }, [router]);
+    window.location.href = `/historial/${historialId}`;
+  }, []);
 
   // Función para formatear fecha
   const formatDate = useCallback((dateString: string) => {

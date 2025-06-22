@@ -35,8 +35,42 @@ interface HistorialDetalleProps {
     cita: string;
     doctorAtendio: string;
     fechaHistorial: string;
+    receta: string;
+    recomendacion: string;
   };
 }
+
+const calculateAge = (birthDateStr: string): string => {
+  if (!birthDateStr) return '-';
+  const birthDate = new Date(birthDateStr);
+  const now = new Date();
+
+  let years = now.getFullYear() - birthDate.getFullYear();
+  let months = now.getMonth() - birthDate.getMonth();
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  if (years <= 0 && months <= 0) return 'Recién nacido';
+  if (years === 0) return `${months} mes(es)`;
+  if (months === 0) return `${years} año(s)`;
+  return `${years} año(s) y ${months} mes(es)`;
+};
+
+const formatDateTime = (dateStr: string): string => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  return date.toLocaleString(undefined, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 
 const formatDate = (dateStr: string) =>
   dateStr ? new Date(dateStr).toLocaleDateString() : '-';
@@ -101,7 +135,7 @@ const HistorialDetalleModal: React.FC<HistorialDetalleProps> = ({
                 <td className="border px-2 md:px-5 py-2 md:py-4">{historialDetalle.nombreMascota}</td>
                 <td className="border px-2 md:px-5 py-2 md:py-4">{historialDetalle.raza}</td>
                 <td className="border px-2 md:px-5 py-2 md:py-4">{historialDetalle.especie}</td>
-                <td className="border px-2 md:px-5 py-2 md:py-4">{formatDate(historialDetalle.fechaNacimiento)}</td>
+                <td className="border px-2 md:px-5 py-2 md:py-4">{calculateAge(historialDetalle.fechaNacimiento)}</td>
                 <td className="border px-2 md:px-5 py-2 md:py-4">{historialDetalle.sexo}</td>
                 <td className="border px-2 md:px-5 py-2 md:py-4">{historialDetalle.nombreDueno}</td>
               </tr>
@@ -131,6 +165,8 @@ const HistorialDetalleModal: React.FC<HistorialDetalleProps> = ({
                 ['Síntomas/Signos', historialDetalle.sintomasSignos],
                 ['Tratamiento', historialDetalle.tratamiento],
                 ['Diagnóstico', historialDetalle.diagnostico],
+                ['Receta', historialDetalle.receta],
+                ['Recomendación', historialDetalle.recomendacion],
               ].map(([label, value]) => renderSection(label, value))}
 
               {/* Última fila: cita, doctor, fecha historial */}
@@ -143,7 +179,7 @@ const HistorialDetalleModal: React.FC<HistorialDetalleProps> = ({
                 <td className="border px-2 md:px-5 py-2 md:py-3" colSpan={2}></td>
               </tr>
               <tr className="text-center text-gray-700 text-sm md:text-base">
-                <td className="border px-2 md:px-5 py-2 md:py-4">{historialDetalle.cita || '-'}</td>
+                <td className="border px-2 md:px-5 py-2 md:py-4">{formatDateTime(historialDetalle.cita)}</td>
                 <td className="border px-2 md:px-5 py-2 md:py-4">{historialDetalle.doctorAtendio || '-'}</td>
                 <td className="border px-2 md:px-5 py-2 md:py-4" colSpan={2}>
                   {formatDate(historialDetalle.fechaHistorial)}
