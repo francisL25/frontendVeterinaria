@@ -18,6 +18,15 @@ import { useIonRouter } from '@ionic/react';
 import api from '../services/api';
 import { searchOutline } from 'ionicons/icons';
 import UserMenu from '../components/UserMenu';
+import CitasMedicasModal from '../components/CitasMedicasModal';
+import dayjs from 'dayjs';
+import 'dayjs/locale/es';
+import duration from 'dayjs/plugin/duration';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
+dayjs.locale('es');
+dayjs.extend(duration);
+dayjs.extend(relativeTime);
 
 interface Historial {
   id: number;
@@ -30,6 +39,9 @@ interface Historial {
 }
 
 const Tab1: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const { refetchFlag } = useContext(HistorialContext);
   const [searchTerm, setSearchTerm] = useState('');
   const [historiales, setHistoriales] = useState<Historial[]>([]);
@@ -38,7 +50,13 @@ const Tab1: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastColor, setToastColor] = useState<'success' | 'danger' | 'warning'>('danger');
   const router = useIonRouter();
+  const [modalCitasOpen, setModalCitasOpen] = useState(false);
 
+  const totalPages = Math.ceil(historiales.length / itemsPerPage);
+  const paginatedHistoriales = historiales.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
   // Función para mostrar toast
   const showToastMessage = useCallback((message: string, color: 'success' | 'danger' | 'warning' = 'danger') => {
     setToastMessage(message);
@@ -75,7 +93,7 @@ const Tab1: React.FC = () => {
       setHistoriales(response.data);
     } catch (error: any) {
       console.error('Error al buscar historiales:', error);
-      showToastMessage('Error al buscar historiales');
+      showToastMessage('No se encontraron resultados', 'warning');
     } finally {
       setLoading(false);
     }
@@ -91,13 +109,34 @@ const Tab1: React.FC = () => {
     const timeoutId = setTimeout(() => {
       searchHistoriales();
     }, 300);
-
+    setCurrentPage(1);
     return () => clearTimeout(timeoutId);
   }, [searchHistoriales]);
 
   // Función para navegar al detalle
   const handleVerHistorial = useCallback((historialId: number) => {
     window.location.href = `/historial/${historialId}`;
+  }, []);
+
+  const calculateAge = useCallback((dateString: string): string => {
+    const birthDate = dayjs(dateString);
+    const now = dayjs();
+
+    if (!birthDate.isValid()) return 'Fecha inválida';
+
+    const years = now.diff(birthDate, 'year');
+    const months = now.diff(birthDate.add(years, 'year'), 'month');
+
+    if (years < 0 || months < 0) return 'Fecha inválida';
+
+    let ageString = '';
+    if (years > 0) ageString += `${years} año${years > 1 ? 's' : ''}`;
+    if (months > 0) {
+      if (ageString) ageString += ' y ';
+      ageString += `${months} mes${months > 1 ? 'es' : ''}`;
+    }
+
+    return ageString || '0 meses';
   }, []);
 
   // Función para formatear fecha
@@ -126,13 +165,18 @@ const Tab1: React.FC = () => {
           {/* Botón Agregar */}
           <IonButton
             size="default"
-            color="tertiary"
             onClick={() => router.push('/tabs/tab2', 'forward')}
-            className="w-full md:w-auto min-w-fit"
+            className="w-full md:w-auto min-w-fit color-boton"
           >
             + Agregar Historial Nuevo
           </IonButton>
-
+          <IonButton
+            size="default"
+            onClick={() => setModalCitasOpen(true)}
+            className="w-full md:w-auto min-w-fit color-boton"
+          >
+            Ver Citas Médicas
+          </IonButton>
           {/* Barra de búsqueda */}
           <div className="flex items-center w-full md:w-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-md px-3 py-2 gap-2 border border-gray-300">
             <IonIcon icon={searchOutline} className="text-gray-500 text-xl flex-shrink-0" />
@@ -155,11 +199,11 @@ const Tab1: React.FC = () => {
           )}
 
           <table className="min-w-full text-sm text-left">
-            <thead className="bg-purple-700 text-white sticky top-0 z-10">
+            <thead style={{ backgroundColor: '#019391' }} className="text-white sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-2">#</th>
                 <th className="px-4 py-2">Nombre Mascota</th>
-                <th className="px-4 py-2">Fecha Nac.</th>
+                <th className="px-4 py-2">Edad</th>
                 <th className="px-4 py-2">Nombre Dueño</th>
                 <th className="px-4 py-2">C.I.</th>
                 <th className="px-4 py-2">Teléfono</th>
@@ -168,18 +212,18 @@ const Tab1: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {historiales.length === 0 && !loading ? (
+              {paginatedHistoriales.length === 0 && !loading ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                     {searchTerm ? 'No se encontraron resultados' : 'No hay historiales registrados'}
                   </td>
                 </tr>
               ) : (
-                historiales.map((historial, index) => (
+                paginatedHistoriales.map((historial, index) => (
                   <tr key={historial.id} className="border-b hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <td className="px-4 py-2">{index + 1}</td>
+                    <td className="px-4 py-2">{(currentPage - 1) * itemsPerPage + index + 1}</td>
                     <td className="px-4 py-2 font-medium">{historial.nombreMascota || 'N/A'}</td>
-                    <td className="px-4 py-2">{formatDate(historial.fechaNacimiento)}</td>
+                    <td className="px-4 py-2">{calculateAge(historial.fechaNacimiento)}</td>
                     <td className="px-4 py-2">{historial.nombreDueno || 'N/A'}</td>
                     <td className="px-4 py-2">{historial.carnetIdentidad || 'N/A'}</td>
                     <td className="px-4 py-2">{historial.telefono || 'N/A'}</td>
@@ -190,7 +234,7 @@ const Tab1: React.FC = () => {
                       <IonButton
                         size="small"
                         fill="solid"
-                        color="primary"
+                        className="color-boton"
                         onClick={() => handleVerHistorial(historial.id)}
                       >
                         Ver
@@ -202,7 +246,27 @@ const Tab1: React.FC = () => {
             </tbody>
           </table>
         </div>
-
+        <div className="flex justify-center items-center gap-2 mt-4">
+          <IonButton
+            className="color-boton"
+            size="small"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => prev - 1)}
+          >
+            Anterior
+          </IonButton>
+          <span className="text-sm">
+            Página {currentPage} de {totalPages}
+          </span>
+          <IonButton
+            size="small"
+            disabled={currentPage === totalPages}
+            className="color-boton"
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+          >
+            Siguiente
+          </IonButton>
+        </div>
         <IonToast
           isOpen={showToast}
           onDidDismiss={() => setShowToast(false)}
@@ -210,6 +274,8 @@ const Tab1: React.FC = () => {
           duration={3000}
           color={toastColor}
         />
+        {/* Modal de citas médicas */}
+        <CitasMedicasModal isOpen={modalCitasOpen} onClose={() => setModalCitasOpen(false)} />
       </IonContent>
     </IonPage>
   );

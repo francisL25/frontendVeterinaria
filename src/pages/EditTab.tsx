@@ -18,261 +18,749 @@ import {
   IonPopover,
   IonCheckbox,
   IonToast,
-  IonModal,
-  IonIcon
+  IonIcon,
 } from '@ionic/react';
 import { useContext, useState, useEffect } from 'react';
+import { useParams, useLocation, useHistory } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { HistorialContext } from '../context/HistorialContext';
-import { useIonRouter, useIonViewWillEnter } from '@ionic/react';
-import { useParams } from 'react-router-dom';
 import { checkmarkCircleOutline } from 'ionicons/icons';
 import api from '../services/api';
 import UserMenu from '../components/UserMenu';
 
-interface InformacionMascota {
-  edad: string;
-  peso: string;
-  sexo: string;
-  castrado: boolean;
-  esterilizado: boolean;
-  [key: string]: string | boolean;
+function edadTextoAFecha(edad: string): string {
+  const match = edad.match(/(?:(\d+)\s*años?)?\s*(?:(\d+)\s*mes(?:es)?)?/i);
+  if (!match) return '';
+  const anios = parseInt(match[1] ?? '0');
+  const meses = parseInt(match[2] ?? '0');
+
+  const fecha = new Date();
+  fecha.setFullYear(fecha.getFullYear() - anios);
+  fecha.setMonth(fecha.getMonth() - meses);
+
+  return fecha.toISOString().split('T')[0]; // YYYY-MM-DD
 }
 
-interface FormData {
-  nombreMascota: string;
-  nombreDueño: string;
-  anamnesis: string;
-  sintomasSignos: string;
-  tratamiento: string;
-  diagnostico: string;
-  doctorAtendio: string;
-  cita: string;
-  informacionMascota: InformacionMascota;
-  [key: string]: any;
+function calcularEdadStr(fechaNacimientoStr: string): string {
+  const hoy = new Date();
+  const fechaNacimiento = new Date(fechaNacimientoStr);
+
+  let anios = hoy.getFullYear() - fechaNacimiento.getFullYear();
+  let meses = hoy.getMonth() - fechaNacimiento.getMonth();
+
+  if (meses < 0 || (meses === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+    anios--;
+    meses += 12;
+  }
+
+  if (hoy.getDate() < fechaNacimiento.getDate()) {
+    meses--;
+  }
+
+  return `${anios} año${anios !== 1 ? 's' : ''} y ${meses} mes${meses !== 1 ? 'es' : ''}`;
 }
 
 const EditTab: React.FC = () => {
-  const { nombre, logout } = useContext(AuthContext);
+  const location = useLocation();
+  const history = useHistory();
+  const query = new URLSearchParams(location.search);
+  const idH = query.get('idH');
+  const { id: id } = useParams<{ id: string }>();
+  const { nombre } = useContext(AuthContext);
   const { triggerRefetch } = useContext(HistorialContext);
-  const router = useIonRouter();
-  const { id } = useParams<{ id: string }>();
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
+  interface FormData {
+    nombreMascota: string;
+    raza: string;
+    especie: string;
+    fechaNacimiento: string;
+    sexo: string;
+    nombreDueno: string;
+    carnetIdentidad: string;
+    telefono: string;
+    direccion: string;
+    peso: string;
+    castrado: boolean;
+    esterilizado: boolean;
+    seniaParticular: string;
+    anamnesis: string;
+    sintomasSignos: string;
+    tratamiento: string;
+    diagnostico: string;
+    cita: string | null;  // Aquí permitimos null
+    doctorAtendio: string;
+    fechaHistorial: string;
+    receta: string;
+    recomendacion: string;
+  }
 
-  const initialFormData: FormData = {
+  const initialForm = {
     nombreMascota: '',
-    nombreDueño: '',
+    raza: '',
+    especie: '',
+    fechaNacimiento: '',
+    sexo: '',
+    nombreDueno: '',
+    carnetIdentidad: '',
+    telefono: '',
+    direccion: '',
+    peso: '',
+    castrado: false,
+    esterilizado: false,
+    seniaParticular: '',
     anamnesis: '',
     sintomasSignos: '',
     tratamiento: '',
     diagnostico: '',
+    cita: null,
     doctorAtendio: '',
-    cita: '',
-    informacionMascota: {
-      edad: '',
-      peso: '',
-      sexo: '',
-      castrado: false,
-      esterilizado: false
-    }
+    fechaHistorial: '',
+    receta: '',
+    recomendacion: ''
   };
 
-  const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [showToast, setShowToast] = useState(false);
-  const [toastColor, setToastColor] = useState('danger');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [edadAnio, setEdadAnio] = useState<number | null>(null);
+  const [edadMes, setEdadMes] = useState<number | null>(null);
+  const [formData, setFormData] = useState<FormData>(initialForm);
 
-  useIonViewWillEnter(() => {
-    const fetchHistorial = async () => {
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastColor, setToastColor] = useState<'success' | 'danger' | 'warning'>('danger');
+  const [openPicker, setOpenPicker] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [datosFijos, setDatosFijos] = useState({});
+
+  useEffect(() => {
+    const obtenerUltimoHistorial = async () => {
       try {
-        const response = await api.get(`/historial/${id}`);
+        const response = await api.get(`/historialFecha/${id}`);
         const historial = response.data;
-        setFormData({
+        const fecha = calcularEdadStr(historial.fechaNacimiento);
+        const camposFijos = {
           nombreMascota: historial.nombreMascota || '',
-          nombreDueño: historial.nombreDueño || '',
+          raza: historial.raza || '',
+          especie: historial.especie || '',
+          fechaNacimiento: fecha || '',
+          sexo: historial.sexo || '',
+          nombreDueno: historial.nombreDueno || '',
+          carnetIdentidad: historial.carnetIdentidad || '',
+          telefono: historial.telefono || '',
+          direccion: historial.direccion || '',
+          peso: historial.peso || '',
+          castrado: historial.castrado || false,
+          esterilizado: historial.esterilizado || false,
+          seniaParticular: historial.seniaParticular || '',
           anamnesis: historial.anamnesis || '',
           sintomasSignos: historial.sintomasSignos || '',
           tratamiento: historial.tratamiento || '',
           diagnostico: historial.diagnostico || '',
+          cita: historial.cita || null,
           doctorAtendio: historial.doctorAtendio || '',
-          cita: historial.cita || '',
-          informacionMascota: {
-            edad: historial.InformacionMascotum?.edad?.toString() || '',
-            peso: historial.InformacionMascotum?.peso?.toString() || '',
-            sexo: historial.InformacionMascotum?.sexo || '',
-            castrado: historial.InformacionMascotum?.castrado || false,
-            esterilizado: historial.InformacionMascotum?.esterilizado || false
-          }
-        });
-      } catch (error: any) {
-        setToastMessage('Error al cargar el historial');
-        setToastColor('danger');
-        setShowToast(true);
+          fechaHistorial: historial.fechaHistorial || '',
+          receta: historial.receta || '',
+          recomendacion: historial.recomendacion || ''
+        };
+
+
+        setDatosFijos(camposFijos);
+        setFormData(prev => ({ ...prev, ...camposFijos }));
+      } catch (error) {
+        console.error('No se pudo cargar historial anterior:', error);
+        showToastMessage('No se pudo cargar datos anteriores', 'warning');
       }
     };
-    fetchHistorial();
+
+    if (id) {
+      obtenerUltimoHistorial();
+    }
   }, [id]);
+
+  useEffect(() => {
+    let texto = '';
+    if (edadAnio) texto += `${edadAnio} año${edadAnio > 1 ? 's' : ''}`;
+    if (edadMes) texto += (texto ? ' ' : '') + `${edadMes} mes${edadMes > 1 ? 'es' : ''}`;
+
+    setFormData(prev => ({
+      ...prev,
+      fechaNacimiento: texto.trim(),
+    }));
+  }, [edadAnio, edadMes]);
 
   const handleInputChange = (e: any) => {
     const { name, value } = e.target;
-    if (['edad', 'peso', 'sexo'].includes(name)) {
-      setFormData((prev) => ({
-        ...prev,
-        informacionMascota: { ...prev.informacionMascota, [name]: value }
-      }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCheckboxChange = (name: string, checked: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      informacionMascota: {
-        ...prev.informacionMascota,
-        castrado: name === 'castrado' ? checked : prev.informacionMascota.castrado,
-        esterilizado: name === 'esterilizado' ? checked : prev.informacionMascota.esterilizado
+const handleCheckboxChange = (name: string, checked: boolean) => {
+  setFormData(prev => {
+    if (checked) {
+      if (name === 'castrado') {
+        return { ...prev, castrado: true, esterilizado: false };
       }
-    }));
+      if (name === 'esterilizado') {
+        return { ...prev, castrado: false, esterilizado: true };
+      }
+    }
+    // Si se desmarca, solo actualizamos ese campo
+    return { ...prev, [name]: checked };
+  });
+};
+
+
+  const handleDateChange = (name: string, e: CustomEvent) => {
+    setFormData(prev => ({ ...prev, [name]: e.detail.value }));
+    setOpenPicker('');
   };
 
-  const handleDateChange = (e: CustomEvent) => {
-    setFormData((prev) => ({ ...prev, cita: e.detail.value }));
-    setShowDatePicker(false);
+  const showToastMessage = (message: string, color: 'success' | 'danger' | 'warning') => {
+    setToastMessage(message);
+    setToastColor(color);
+    setShowToast(true);
   };
 
-  const validateForm = () => {
-    const requiredFields = [
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
+    const camposObligatorios = [
       'nombreMascota',
-      'nombreDueño',
+      'raza',
+      'especie',
+      'fechaNacimiento',
+      'sexo',
+      'nombreDueno',
+      'carnetIdentidad',
+      'telefono',
+      'direccion',
+      'peso',
       'anamnesis',
       'sintomasSignos',
-      'tratamiento',
       'diagnostico',
-      'doctorAtendio'
+      'receta',
+      'recomendacion'
     ];
-    for (const field of requiredFields) {
-      const value = formData[field];
-      if (!value || (typeof value === 'string' && !value.trim())) {
-        return `El campo ${field} es obligatorio`;
-      }
-    }
-    const infoMascotaFields = ['edad', 'peso', 'sexo'];
-    for (const field of infoMascotaFields) {
-      const value = formData.informacionMascota[field];
-      if (!value || (typeof value === 'string' && !value.trim())) {
-        return `El campo ${field} de información de la mascota es obligatorio`;
-      }
-    }
-    if (isNaN(Number(formData.informacionMascota.edad)) || Number(formData.informacionMascota.edad) <= 0) {
-      return 'La edad debe ser un número positivo';
-    }
-    if (isNaN(Number(formData.informacionMascota.peso)) || Number(formData.informacionMascota.peso) <= 0) {
-      return 'El peso debe ser un número positivo';
-    }
-    return null;
-  };
 
-  const handleSaveHistorial = async () => {
-    const validationError = validateForm();
-    if (validationError) {
-      setToastMessage(validationError);
-      setToastColor('danger');
-      setShowToast(true);
+    const camposFaltantes = camposObligatorios.filter(
+      (campo) => !formData[campo as keyof typeof formData]
+    );
+
+    if (camposFaltantes.length > 0) {
+      showToastMessage(`Faltan campos obligatorios: ${camposFaltantes.join(', ')}`, 'danger');
       return;
     }
 
+    // Validar formato de teléfono
+    if (!/^\d{7,8}$/.test(formData.telefono)) {
+      showToastMessage('El teléfono debe tener 7 u 8 dígitos numéricos', 'danger');
+      return;
+    }
+
+    // Validar peso
+    const peso = parseFloat(formData.peso);
+    if (isNaN(peso) || peso <= 0) {
+      showToastMessage('El peso debe ser un número válido mayor a 0', 'danger');
+      return;
+    }
+
+    // Validar fecha de cita
+    if (formData.cita) {
+      console.log(formData.cita);
+      const citaDate = new Date(formData.cita);
+      const now = new Date();
+      if (isNaN(citaDate.getTime())) {
+        showToastMessage('La fecha de la cita no es válida', 'danger');
+        return;
+      }
+      if (citaDate < now) {
+        showToastMessage('La fecha de la cita no puede ser anterior a la fecha actual', 'danger');
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+
     try {
-      const payload = {
+      const fechaNacimientoEstimada = edadTextoAFecha(formData.fechaNacimiento);
+
+      const dataConHistorial = {
         ...formData,
-        cita: formData.cita ? new Date(formData.cita).toISOString().split('T')[0] : null,
-        informacionMascota: {
-          edad: Number(formData.informacionMascota.edad),
-          peso: Number(formData.informacionMascota.peso),
-          sexo: formData.informacionMascota.sexo,
-          castrado: formData.informacionMascota.castrado,
-          esterilizado: formData.informacionMascota.esterilizado
-        }
+        fechaNacimiento: fechaNacimientoEstimada,
+        idH: idH,
+        fechaHistorial: new Date().toISOString()
       };
 
-      await api.put(`/historial/${id}`, payload);
-      setShowSuccessModal(true);
-    } catch (error: any) {
-      setToastMessage(error.response?.data?.error || 'Error al guardar historial');
-      setToastColor('danger');
-      setShowToast(true);
-    }
-  };
+      // Ejecutar ambas operaciones en paralelo
+      const [historialFechaResponse, historialResponse] = await Promise.allSettled([
+        api.put(`/historialFecha/${id}`, dataConHistorial),
+        api.put(`/historial/${idH}`, dataConHistorial)
+      ]);
 
-  const handleCloseSuccessModal = () => {
-    setShowSuccessModal(false);
-    setFormData(initialFormData);
-    triggerRefetch();
-    router.push('/tabs/tab1', 'root');
+      let hasError = false;
+      let successMessages = [];
+
+      // Verificar resultado del historial por fecha
+      if (historialFechaResponse.status === 'fulfilled' &&
+        historialFechaResponse.value.status === 201) {
+        const { historialFechaId } = historialFechaResponse.value.data;
+        
+        if (pdfFiles.length > 0 && historialFechaId) {
+          const formDataDocs = new FormData();
+          pdfFiles.forEach(file => {
+            formDataDocs.append('documentos', file);
+          });
+          formDataDocs.append('historial_id', historialFechaId);
+
+          try {
+            await api.post('/documentos', formDataDocs, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            console.log('Documentos subidos correctamente');
+          } catch (uploadError) {
+            console.error('Error al subir los documentos:', uploadError);
+            showToastMessage('El historial fue guardado, pero los documentos no se pudieron subir', 'success');
+          }
+        }
+
+        successMessages.push('Historial por fecha creado correctamente');
+      } else {
+        console.error('Error al crear historial por fecha:', historialFechaResponse);
+        hasError = true;
+      }
+
+      // Verificar resultado del historial principal
+      if (historialResponse.status === 'fulfilled' &&
+        (historialResponse.value.status === 200 || historialResponse.value.status === 201)) {
+        successMessages.push('Historial actualizado correctamente');
+      } else {
+        console.error('Error al actualizar historial:', historialResponse);
+        hasError = true;
+      }
+
+      if (successMessages.length > 0) {
+        showToastMessage(successMessages.join(' y '), 'success');
+
+        // Disparar refetch del contexto
+        if (triggerRefetch) {
+          triggerRefetch();
+        }
+
+        // Redirigir después de un breve delay para mostrar el toast
+        setTimeout(() => {
+          // Forzar refresh de la página de destino
+          window.location.href = `/historial/${idH}`;
+        }, 1500);
+      }
+
+      if (hasError) {
+        showToastMessage('Error parcial al guardar algunos datos', 'warning');
+      }
+
+    } catch (error: any) {
+      console.error('Error general al guardar:', error);
+
+      // Mostrar mensaje de error más específico
+      const errorMessage = error?.response?.data?.message ||
+        error?.message ||
+        'Error desconocido al guardar';
+
+      showToastMessage(`Error al guardar: ${errorMessage}`, 'danger');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar className="custom-toolbar">
-          <IonTitle>Editar Historial</IonTitle>
-          <UserMenu />
+        <IonToolbar className="detalles-arriba">
+          <UserMenu titulo="Editar Historial" />
         </IonToolbar>
       </IonHeader>
 
       <IonContent fullscreen className="ion-padding">
-        <IonGrid className="form-table">
-          <IonRow>
-            <IonCol><IonItem><IonLabel position="stacked">Mascota</IonLabel><IonInput name="nombreMascota" value={formData.nombreMascota} onIonChange={handleInputChange} /></IonItem></IonCol>
-            <IonCol><IonItem><IonLabel position="stacked">Dueño</IonLabel><IonInput name="nombreDueño" value={formData.nombreDueño} onIonChange={handleInputChange} /></IonItem></IonCol>
-            <IonCol><IonItem><IonLabel position="stacked">Edad (años)</IonLabel><IonInput name="edad" type="number" value={formData.informacionMascota.edad} onIonChange={handleInputChange} /></IonItem></IonCol>
-            <IonCol><IonItem><IonLabel position="stacked">Peso (kg)</IonLabel><IonInput name="peso" type="number" step="0.1" value={formData.informacionMascota.peso} onIonChange={handleInputChange} /></IonItem></IonCol>
-            <IonCol><IonItem><IonLabel position="stacked">Sexo</IonLabel>
-              <IonSelect name="sexo" value={formData.informacionMascota.sexo} onIonChange={handleInputChange} placeholder="Seleccionar">
-                <IonSelectOption value="Macho">Macho</IonSelectOption>
-                <IonSelectOption value="Hembra">Hembra</IonSelectOption>
-              </IonSelect>
-            </IonItem></IonCol>
-            <IonCol><IonItem><IonLabel>Castrado</IonLabel><IonCheckbox name="castrado" checked={formData.informacionMascota.castrado} onIonChange={(e) => handleCheckboxChange('castrado', e.detail.checked)} disabled={formData.informacionMascota.esterilizado}/></IonItem></IonCol>
-            <IonCol><IonItem><IonLabel>Esterilizado</IonLabel><IonCheckbox name="esterilizado" checked={formData.informacionMascota.esterilizado} onIonChange={(e) => handleCheckboxChange('esterilizado', e.detail.checked)} disabled={formData.informacionMascota.castrado}/></IonItem></IonCol>
-          </IonRow>
+        <div className="mb-6">
+          <IonButton
+            routerLink={`/historial/${idH}`}
+            color="medium"
+            fill="solid"
+            className="ion-no-padding ion-align-items-center"
+          >
+            ← Volver al Historial
+          </IonButton>
+          <IonItem lines="none" style={{ flex: 1 }}>
+            <IonLabel position="stacked">Subir documentos (PDF)</IonLabel>
+            <input
+              name="documentos"
+              type="file"
+              accept="application/pdf"
+              multiple
+              onChange={(e) => {
+                const files = e.target.files;
+                if (files) {
+                  const fileArray = Array.from(files);
+                  console.log('Archivos seleccionados:', fileArray);
+                  setPdfFiles(fileArray);
+                }
+              }}
+              style={{ marginTop: '8px', display: 'block' }}
+            />
+          </IonItem>
+        </div>
 
-          <IonRow><IonCol size="12"><IonLabel position="stacked">Anamnesis</IonLabel><IonTextarea name="anamnesis" value={formData.anamnesis} onIonChange={handleInputChange} rows={3} /></IonCol></IonRow>
-          <IonRow><IonCol size="12"><IonLabel position="stacked">Síntomas y Signos</IonLabel><IonTextarea name="sintomasSignos" value={formData.sintomasSignos} onIonChange={handleInputChange} rows={3} /></IonCol></IonRow>
-          <IonRow><IonCol size="12"><IonLabel position="stacked">Tratamiento</IonLabel><IonTextarea name="tratamiento" value={formData.tratamiento} onIonChange={handleInputChange} rows={3} /></IonCol></IonRow>
-          <IonRow><IonCol size="12"><IonLabel position="stacked">Diagnóstico</IonLabel><IonTextarea name="diagnostico" value={formData.diagnostico} onIonChange={handleInputChange} rows={3} /></IonCol></IonRow>
-
+        <IonGrid>
+          {/* Fila 1 */}
           <IonRow>
-            <IonCol>
-              <IonItem>
-                <IonLabel position="stacked">Doctor Atendió</IonLabel>
-                <IonInput name="doctorAtendio" value={formData.doctorAtendio} onIonChange={handleInputChange} />
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Nombre Mascota *</IonLabel>
+                <IonInput
+                  name="nombreMascota"
+                  value={formData.nombreMascota}
+                  onIonInput={handleInputChange}
+                  className="ion-text-wrap"
+                  clearInput
+                  required
+                />
               </IonItem>
             </IonCol>
-            <IonCol>
-              <IonItem>
-                <IonLabel position="stacked">Cita</IonLabel>
-                <IonButton id="open-date-picker" onClick={() => setShowDatePicker(true)}>
-                  Seleccionar Fecha
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Raza *</IonLabel>
+                <IonInput
+                  name="raza"
+                  value={formData.raza}
+                  onIonInput={handleInputChange}
+                  clearInput
+                  required
+                />
+              </IonItem>
+            </IonCol>
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Especie *</IonLabel>
+                <IonInput
+                  name="especie"
+                  value={formData.especie}
+                  onIonInput={handleInputChange}
+                  clearInput
+                  required
+                />
+              </IonItem>
+            </IonCol>
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300 flex flex-col" lines="none">
+                <IonLabel className="text-gray-700 font-semibold mb-1">
+                  Edad *
+                </IonLabel>
+
+                {formData.fechaNacimiento && (
+                  <IonLabel className="ion-margin-top text-sm text-gray-600">
+                    {formData.fechaNacimiento}
+                  </IonLabel>
+                )}
+              </IonItem>
+            </IonCol>
+
+          </IonRow>
+
+          {/* Fila 2 */}
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Sexo *</IonLabel>
+                <IonSelect
+                  name="sexo"
+                  value={formData.sexo}
+                  onIonChange={handleInputChange}
+                  interface="popover"
+                >
+                  <IonSelectOption value="Macho">Macho</IonSelectOption>
+                  <IonSelectOption value="Hembra">Hembra</IonSelectOption>
+                </IonSelect>
+              </IonItem>
+            </IonCol>
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Nombre Dueño *</IonLabel>
+                <IonInput
+                  name="nombreDueno"
+                  value={formData.nombreDueno}
+                  onIonInput={handleInputChange}
+                  clearInput
+                  required
+                />
+              </IonItem>
+            </IonCol>
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Carnet Identidad *</IonLabel>
+                <IonInput
+                  name="carnetIdentidad"
+                  value={formData.carnetIdentidad}
+                  onIonInput={handleInputChange}
+                  clearInput
+                  required
+                />
+              </IonItem>
+            </IonCol>
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Teléfono *</IonLabel>
+                <IonInput
+                  name="telefono"
+                  value={formData.telefono}
+                  onIonInput={handleInputChange}
+                  clearInput
+                  type="tel"
+                  required
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          {/* Fila 3 */}
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Dirección *</IonLabel>
+                <IonInput
+                  name="direccion"
+                  value={formData.direccion}
+                  onIonInput={handleInputChange}
+                  clearInput
+                  required
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          {/* Fila 4 */}
+          <IonRow className="ion-margin-vertical items-center">
+            <IonCol size="12" sizeMd="6">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Peso (kg) *</IonLabel>
+                <IonInput
+                  name="peso"
+                  type="number"
+                  value={formData.peso}
+                  onIonInput={handleInputChange}
+                  clearInput
+                  step="0.1"
+                  min="0"
+                  required
+                />
+              </IonItem>
+            </IonCol>
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem lines="none" className="flex items-center gap-2 rounded-md border border-gray-300 p-2">
+                <IonCheckbox
+                  checked={formData.castrado}
+                  onIonChange={(e) => handleCheckboxChange('castrado', e.detail.checked)}
+                  color="primary"
+                />
+                <IonLabel className="text-gray-700 font-semibold mb-0">Castrado</IonLabel>
+              </IonItem>
+            </IonCol>
+
+            <IonCol size="12" sizeMd="3">
+              <IonItem lines="none" className="flex items-center gap-2 rounded-md border border-gray-300 p-2">
+                <IonCheckbox
+                  checked={formData.esterilizado}
+                  onIonChange={(e) => handleCheckboxChange('esterilizado', e.detail.checked)}
+                  color="primary"
+                />
+                <IonLabel className="text-gray-700 font-semibold mb-0">Esterilizado</IonLabel>
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          {/* Fila 5 */}
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Seña Particular</IonLabel>
+                <IonTextarea
+                  name="seniaParticular"
+                  value={formData.seniaParticular}
+                  onIonInput={handleInputChange}
+                  rows={2}
+                  className="ion-text-wrap"
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          {/* Fila 6 */}
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Anamnesis *</IonLabel>
+                <IonTextarea
+                  name="anamnesis"
+                  value={formData.anamnesis}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                  required
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          {/* Fila 7 */}
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Síntomas y Signos *</IonLabel>
+                <IonTextarea
+                  name="sintomasSignos"
+                  value={formData.sintomasSignos}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                  required
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          {/* Fila 8 */}
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Tratamiento</IonLabel>
+                <IonTextarea
+                  name="tratamiento"
+                  value={formData.tratamiento}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          {/* Fila 9 */}
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Diagnóstico *</IonLabel>
+                <IonTextarea
+                  name="diagnostico"
+                  value={formData.diagnostico}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                  required
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Receta *</IonLabel>
+                <IonTextarea
+                  name="receta"
+                  value={formData.receta}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                  required
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          <IonRow className="ion-margin-vertical">
+            <IonCol size="12">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Recomendación *</IonLabel>
+                <IonTextarea
+                  name="recomendacion"
+                  value={formData.recomendacion}
+                  onIonInput={handleInputChange}
+                  rows={3}
+                  className="ion-text-wrap"
+                  required
+                />
+              </IonItem>
+            </IonCol>
+          </IonRow>
+
+          {/* Fila 10 */}
+          <IonRow className="ion-margin-vertical items-center">
+            <IonCol size="12" sizeMd="6">
+              <IonItem className="rounded-md border border-gray-300" lines="none">
+                <IonLabel position="stacked" className="text-gray-700 font-semibold">Doctor Atendió</IonLabel>
+                <IonInput
+                  name="doctorAtendio"
+                  value={formData.doctorAtendio}
+                  onIonInput={handleInputChange}
+                  clearInput
+                />
+              </IonItem>
+            </IonCol>
+
+            <IonCol size="12" sizeMd="6">
+              <IonItem className="rounded-md border border-gray-300 flex flex-col" lines="none">
+                <IonLabel className="text-gray-700 font-semibold mb-1">
+                  Cita
+                </IonLabel>
+
+                <IonButton
+                  id="citaEdit"
+                  onClick={() => setOpenPicker('cita')}
+                  expand="block"
+                  fill="outline"
+                  size="small"
+                  color="primary"
+                >
+                  Seleccionar Fecha y Hora
                 </IonButton>
-                <IonPopover trigger="open-date-picker" isOpen={showDatePicker} onDidDismiss={() => setShowDatePicker(false)}>
-                  <IonDatetime name="cita" value={formData.cita} onIonChange={handleDateChange} presentation="date-time" />
-                </IonPopover>
-                {formData.cita && <IonLabel>{new Date(formData.cita).toLocaleString()}</IonLabel>}
+
+                {formData.cita && (
+                  <IonLabel className="ion-text-center ion-margin-top text-sm text-gray-600">
+                    {new Date(formData.cita).toLocaleString()}
+                  </IonLabel>
+                )}
               </IonItem>
+
+              <IonPopover
+                trigger="citaEdit"
+                isOpen={openPicker === 'cita'}
+                onDidDismiss={() => setOpenPicker('')}
+                alignment="center"
+              >
+                <IonDatetime
+                  presentation="date-time"
+                  onIonChange={(e) => handleDateChange('cita', e)}
+                  style={{ padding: 20 }}
+                  showDefaultButtons={true}
+                />
+              </IonPopover>
             </IonCol>
           </IonRow>
 
-          <IonRow>
-            <IonCol size="6">
-              <IonButton expand="block" onClick={() => router.push('/tabs/tab1')} color="medium">
-                Cancelar
-              </IonButton>
-            </IonCol>
-            <IonCol size="6">
-              <IonButton expand="block" onClick={handleSaveHistorial} color="primary">
-                Guardar Cambios
+          {/* Botón Guardar */}
+          <IonRow className="ion-margin-top ion-justify-content-center">
+            <IonCol size="12" sizeMd="6" className="flex justify-center">
+              <IonButton
+                expand="block"
+                color="success"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="ion-padding-horizontal"
+              >
+                <IonIcon slot="start" icon={checkmarkCircleOutline} />
+                {isSubmitting ? 'Guardando...' : 'Guardar'}
               </IonButton>
             </IonCol>
           </IonRow>
@@ -280,25 +768,12 @@ const EditTab: React.FC = () => {
 
         <IonToast
           isOpen={showToast}
-          onDidDismiss={() => setShowToast(false)}
           message={toastMessage}
-          duration={3000}
           color={toastColor}
+          duration={3000}
+          onDidDismiss={() => setShowToast(false)}
+          position="top"
         />
-
-        <IonPopover
-          isOpen={showSuccessModal}
-          onDidDismiss={handleCloseSuccessModal}
-          translucent={true}
-        >
-          <IonContent className="ion-padding ion-text-center">
-            <IonIcon icon={checkmarkCircleOutline} color="success" size="large" />
-            <h2>Éxito</h2>
-            <p>El historial clínico ha sido actualizado correctamente.</p>
-            <IonButton onClick={handleCloseSuccessModal} color="primary">Aceptar</IonButton>
-          </IonContent>
-        </IonPopover>
-
       </IonContent>
     </IonPage>
   );

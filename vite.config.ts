@@ -10,6 +10,10 @@ export default defineConfig({
     react(),
     legacy()
   ],
+  server: {
+    host: '0.0.0.0',   // <- Esto permite acceso desde otras PCs en la red
+    port: 3000         // <- Cambia si ya está en uso
+  },
   test: {
     globals: true,
     environment: 'jsdom',

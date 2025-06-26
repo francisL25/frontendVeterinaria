@@ -27,11 +27,18 @@ import { HistorialContext } from '../context/HistorialContext';
 import { checkmarkCircleOutline } from 'ionicons/icons';
 import api from '../services/api';
 import UserMenu from '../components/UserMenu';
+import dayjs from 'dayjs';
+import 'dayjs/locale/es';
+import duration from 'dayjs/plugin/duration';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
+dayjs.locale('es');
+dayjs.extend(duration);
+dayjs.extend(relativeTime);
 
 function edadTextoAFecha(edad: string): string {
   const match = edad.match(/(?:(\d+)\s*años?)?\s*(?:(\d+)\s*mes(?:es)?)?/i);
   if (!match) return '';
-
   const anios = parseInt(match[1] ?? '0');
   const meses = parseInt(match[2] ?? '0');
 
@@ -43,28 +50,46 @@ function edadTextoAFecha(edad: string): string {
 }
 
 function calcularEdadStr(fechaNacimientoStr: string): string {
-  const hoy = new Date();
-  const fechaNacimiento = new Date(fechaNacimientoStr);
+  const hoy = dayjs();
+  const nacimiento = dayjs(fechaNacimientoStr);
 
-  let anios = hoy.getFullYear() - fechaNacimiento.getFullYear();
-  let meses = hoy.getMonth() - fechaNacimiento.getMonth();
+  if (!nacimiento.isValid()) return 'Fecha inválida';
 
-  if (meses < 0 || (meses === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
-    anios--;
-    meses += 12;
-  }
+  const años = hoy.diff(nacimiento, 'year');
+  const meses = hoy.diff(nacimiento.add(años, 'year'), 'month');
 
-  if (hoy.getDate() < fechaNacimiento.getDate()) {
-    meses--;
-  }
-
-  return `${anios} año${anios !== 1 ? 's' : ''} y ${meses} mes${meses !== 1 ? 'es' : ''}`;
+  return `${años} año${años !== 1 ? 's' : ''} y ${meses} mes${meses !== 1 ? 'es' : ''}`;
 }
 
 const Tab3: React.FC = () => {
   const { idH } = useParams<{ idH: string }>();
   const { nombre } = useContext(AuthContext);
   const { triggerRefetch } = useContext(HistorialContext);
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
+  interface FormData {
+    nombreMascota: string;
+    raza: string;
+    especie: string;
+    fechaNacimiento: string;
+    sexo: string;
+    nombreDueno: string;
+    carnetIdentidad: string;
+    telefono: string;
+    direccion: string;
+    peso: string;
+    castrado: boolean;
+    esterilizado: boolean;
+    seniaParticular: string;
+    anamnesis: string;
+    sintomasSignos: string;
+    tratamiento: string;
+    diagnostico: string;
+    cita: string | null;  // Aquí permitimos null
+    doctorAtendio: string;
+    fechaHistorial: string;
+    receta: string;
+    recomendacion: string;
+  }
 
   const initialForm = {
     nombreMascota: '',
@@ -84,7 +109,7 @@ const Tab3: React.FC = () => {
     sintomasSignos: '',
     tratamiento: '',
     diagnostico: '',
-    cita: '',
+    cita: null,
     doctorAtendio: '',
     fechaHistorial: '',
     receta: '',
@@ -93,7 +118,8 @@ const Tab3: React.FC = () => {
 
   const [edadAnio, setEdadAnio] = useState<number | null>(null);
   const [edadMes, setEdadMes] = useState<number | null>(null);
-  const [formData, setFormData] = useState(initialForm);
+  const [formData, setFormData] = useState<FormData>(initialForm);
+
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastColor, setToastColor] = useState<'success' | 'danger' | 'warning'>('danger');
@@ -152,9 +178,20 @@ const Tab3: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCheckboxChange = (name: string, checked: boolean) => {
-    setFormData(prev => ({ ...prev, [name]: checked }));
-  };
+const handleCheckboxChange = (name: string, checked: boolean) => {
+  setFormData(prev => {
+    if (checked) {
+      if (name === 'castrado') {
+        return { ...prev, castrado: true, esterilizado: false };
+      } else if (name === 'esterilizado') {
+        return { ...prev, castrado: false, esterilizado: true };
+      }
+    }
+    // Si se está desmarcando, solo actualizamos ese valor
+    return { ...prev, [name]: checked };
+  });
+};
+
 
   const handleDateChange = (name: string, e: CustomEvent) => {
     setFormData(prev => ({ ...prev, [name]: e.detail.value }));
@@ -212,6 +249,7 @@ const Tab3: React.FC = () => {
 
     // Validar fecha de cita
     if (formData.cita) {
+      console.log(formData.cita);
       const citaDate = new Date(formData.cita);
       const now = new Date();
       if (isNaN(citaDate.getTime())) {
@@ -248,6 +286,25 @@ const Tab3: React.FC = () => {
       // Verificar resultado del historial por fecha
       if (historialFechaResponse.status === 'fulfilled' &&
         historialFechaResponse.value.status === 201) {
+        const { historialFechaId } = historialFechaResponse.value.data;
+        if (pdfFiles.length > 0 && historialFechaId) {
+          const formDataDocs = new FormData();
+          pdfFiles.forEach(file => {
+            formDataDocs.append('documentos', file);
+          });
+          formDataDocs.append('historial_id', historialFechaId);
+
+          try {
+            await api.post('/documentos', formDataDocs, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            console.log('Documentos subidos correctamente');
+          } catch (uploadError) {
+            console.error('Error al subir los documentos:', uploadError);
+            showToastMessage('El historial fue guardado, pero los documentos no se pudieron subir', 'success');
+          }
+        }
+
         successMessages.push('Historial por fecha creado correctamente');
       } else {
         console.error('Error al crear historial por fecha:', historialFechaResponse);
@@ -280,6 +337,9 @@ const Tab3: React.FC = () => {
         // Limpiar selectores de edad
         setEdadAnio(null);
         setEdadMes(null);
+
+        // Limpiar archivos PDF
+        setPdfFiles([]);
       }
 
       if (hasError) {
@@ -317,7 +377,7 @@ const Tab3: React.FC = () => {
       </IonHeader>
 
       <IonContent fullscreen className="ion-padding">
-        <div className="mb-6">
+        <div className="mb-4" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <IonButton
             routerLink={`/historial/${idH}`}
             color="medium"
@@ -326,11 +386,29 @@ const Tab3: React.FC = () => {
           >
             ← Volver al Historial
           </IonButton>
+          <IonItem lines="none" style={{ flex: 1 }}>
+            <IonLabel position="stacked">Subir documentos (PDF)</IonLabel>
+            <input
+              name="documentos"
+              type="file"
+              accept="application/pdf"
+              multiple
+              onChange={(e) => {
+                const files = e.target.files;
+                if (files) {
+                  const fileArray = Array.from(files);
+                  console.log('Archivos seleccionados:', fileArray);
+                  setPdfFiles(fileArray);
+                }
+              }}
+              style={{ marginTop: '8px', display: 'block' }}
+            />
+          </IonItem>
         </div>
 
         <IonGrid>
           {/* Fila 1 */}
-          <IonRow className="ion-margin-vertical">
+          <IonRow>
             <IonCol size="12" sizeMd="3">
               <IonItem className="rounded-md border border-gray-300" lines="none">
                 <IonLabel position="stacked" className="text-gray-700 font-semibold">Nombre Mascota *</IonLabel>
@@ -707,7 +785,7 @@ const Tab3: React.FC = () => {
           color={toastColor}
           duration={3000}
           onDidDismiss={() => setShowToast(false)}
-          position="bottom"
+          position="top"
         />
       </IonContent>
     </IonPage>

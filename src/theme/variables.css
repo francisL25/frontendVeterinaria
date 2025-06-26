@@ -78,10 +78,6 @@
   /* Si quieres un color más claro o diferente */
   --backdrop-background: rgba(0, 0, 0, 0.3) !important;
 }
-.detalles-arriba {
-  --background: #820aad;
-  color: white;
-}
 
 /* Login.css */
 
@@ -98,7 +94,7 @@
 /* Tarjeta de login */
 .login-card {
   background: white;
-  border: 2px solid #a855f7;
+  border: 2px solid #019391;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   border-radius: 1rem;
   padding: 2rem;
@@ -115,7 +111,7 @@
 }
 
 .login-icon ion-icon {
-  color: #7c3aed;
+  color: #019391;
   font-size: 4rem;
 }
 
@@ -124,7 +120,7 @@
   font-size: 1.5rem;
   font-weight: bold;
   text-align: center;
-  color: #7c3aed;
+  color: #019391;
   margin-bottom: 0.5rem;
 }
 
@@ -156,8 +152,8 @@
 
 /* Botón de login */
 .login-button {
-  --background: #7c3aed;
-  --background-hover: #6d28d9;
+  --background: #019391;
+  --background-hover: #019391;
   --color: white;
   --border-radius: 0.5rem;
   --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -166,7 +162,7 @@
 }
 
 .login-button:hover {
-  --background: #6d28d9;
+  --background: #3f3a46;
   transform: translateY(-1px);
 }
 
@@ -178,7 +174,7 @@
 
 /* Toolbar personalizado */
 .detalles-arriba {
-  --background: #7c3aed;
+  --background: #019391;
   --color: white;
 }
 
@@ -187,6 +183,11 @@
   text-align: center;
   font-size: 1.1rem;
 }
+.color-boton {
+  --background: #019391;
+  --color: white;
+}
+
 
 /* Responsive */
 @media (max-width: 768px) {

@@ -49,7 +49,7 @@ interface FormData {
   sintomasSignos: string;
   tratamiento: string;
   diagnostico: string;
-  cita: string;
+  cita?: string | null;
   doctorAtendio: string;
   fechaHistorial: string;
   receta: string;
@@ -166,13 +166,24 @@ const Tab2: React.FC = () => {
     }
   }, []);
 
-  const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean) => {
-    try {
-      setFormData(prev => ({ ...prev, [name]: checked }));
-    } catch (error) {
-      console.error('Error en handleCheckboxChange:', error);
-    }
-  }, []);
+const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean) => {
+  try {
+    setFormData(prev => {
+      if (checked) {
+        if (name === 'castrado') {
+          return { ...prev, castrado: true, esterilizado: false };
+        } else if (name === 'esterilizado') {
+          return { ...prev, castrado: false, esterilizado: true };
+        }
+      }
+      // Si se está desmarcando, solo actualizamos el valor correspondiente
+      return { ...prev, [name]: checked };
+    });
+  } catch (error) {
+    console.error('Error en handleCheckboxChange:', error);
+  }
+}, []);
+
 
   const handleDateChange = useCallback((name: keyof FormData, e: CustomEvent) => {
     try {
@@ -219,7 +230,8 @@ const Tab2: React.FC = () => {
 
   const validateInputs = useCallback((): boolean => {
     // Validar fecha de cita si está presente
-    if (formData.cita) {
+    if (formData.cita && formData.cita !== 'sin cita') {
+      console.log("entro");
       const citaDate = new Date(formData.cita);
       const now = new Date();
 
@@ -232,7 +244,14 @@ const Tab2: React.FC = () => {
         showToastMessage('La fecha de la cita debe ser posterior a la fecha actual');
         return false;
       }
+
+      // Si es válida, guardar en formato ISO
+      formData.cita = citaDate.toISOString();
+    } else {
+      // Si no hay cita, mandar null (no string vacío ni "Invalid date")
+      formData.cita = null;
     }
+
 
     // Validar formato de teléfono
     if (!/^(\d{7,8})(\s+\d{7,8})?$/.test(formData.telefono.trim())) {
@@ -317,7 +336,7 @@ const Tab2: React.FC = () => {
       const response = await api.post('/historial', dataToSubmit);
 
       if (response.status === 201 || response.status === 200) {
-        const { historialId, historialFechaId } = response.data;
+        const { historialFechaId } = response.data;
 
         setShowSuccessModal(true);
         console.log('Archivos PDF seleccionados:', pdfFiles);
@@ -423,7 +442,7 @@ const Tab2: React.FC = () => {
   }, []);
 
   return (
-    
+
     <IonPage>
       <IonHeader>
         <IonToolbar className="detalles-arriba">
@@ -432,29 +451,31 @@ const Tab2: React.FC = () => {
       </IonHeader>
 
       <IonContent fullscreen className="ion-padding">
-        <div className="mb-4">
+        <div className="mb-4" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <IonButton routerLink="/tabs/tab1" color="medium">
             ← Volver
           </IonButton>
-          <IonItem lines="none">
-  <IonLabel position="stacked">Subir documentos (PDF)</IonLabel>
-  <input
-    type="file"
-    accept="application/pdf"
-    multiple
-    onChange={(e) => {
-      const files = e.target.files;
-      if (files) {
-        const fileArray = Array.from(files);
-        console.log('Archivos seleccionados:', fileArray);
-        setPdfFiles(fileArray);
-      }
-    }}
-    style={{ marginTop: '8px', display: 'block' }}
-  />
-</IonItem>
 
+          <IonItem lines="none" style={{ flex: 1 }}>
+            <IonLabel position="stacked">Subir documentos (PDF)</IonLabel>
+            <input
+              name="documentos"
+              type="file"
+              accept="application/pdf"
+              multiple
+              onChange={(e) => {
+                const files = e.target.files;
+                if (files) {
+                  const fileArray = Array.from(files);
+                  console.log('Archivos seleccionados:', fileArray);
+                  setPdfFiles(fileArray);
+                }
+              }}
+              style={{ marginTop: '8px', display: 'block' }}
+            />
+          </IonItem>
         </div>
+
 
         <IonGrid>
 
@@ -922,38 +943,7 @@ const Tab2: React.FC = () => {
           </IonCol>
         </IonRow>
 
-        {/* Modal de confirmación de éxito */}
-        <IonModal isOpen={showSuccessModal} onDidDismiss={closeSuccessModal}>
-          <IonHeader>
-            <IonToolbar>
-              <IonTitle>Éxito</IonTitle>
-              <IonButton
-                slot="end"
-                fill="clear"
-                onClick={closeSuccessModal}
-              >
-                <IonIcon icon={closeOutline} />
-              </IonButton>
-            </IonToolbar>
-          </IonHeader>
-          <IonContent className="ion-padding">
-            <div className="ion-text-center">
-              <IonIcon
-                icon={checkmarkCircleOutline}
-                style={{ fontSize: '4rem', color: 'var(--ion-color-success)' }}
-              />
-              <h2>Historial Guardado</h2>
-              <p>El historial médico ha sido guardado exitosamente.</p>
-              <IonButton
-                expand="block"
-                color="success"
-                onClick={closeSuccessModal}
-              >
-                Continuar
-              </IonButton>
-            </div>
-          </IonContent>
-        </IonModal>
+
 
         {/* Loading */}
         <IonLoading
@@ -967,7 +957,7 @@ const Tab2: React.FC = () => {
           isOpen={showToast}
           message={toastMessage}
           color={toastColor}
-          duration={3000}
+          duration={2000}
           onDidDismiss={() => setShowToast(false)}
           position="top"
           buttons={[
