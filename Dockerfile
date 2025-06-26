@@ -1,26 +1,34 @@
-# Etapa 1: build de la app
-FROM node:20-alpine AS builder
+# Dockerfile para Frontend Ionic React
 
+# Etapa 1: Build
+FROM node:18-alpine as build
+
+# Establecer directorio de trabajo
 WORKDIR /app
 
+# Copiar package.json y package-lock.json
 COPY package*.json ./
+
+# Instalar dependencias
+RUN npm ci --only=production
+
+# Copiar código fuente
 COPY . .
 
-RUN npm install
+# Construir la aplicación
 RUN npm run build
 
-# Etapa 2: servir la app con Nginx
-FROM nginx:stable-alpine
+# Etapa 2: Servidor de producción
+FROM nginx:alpine
 
-# Copiar archivos estáticos construidos
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copiar archivos construidos desde la etapa de build
+COPY --from=build /app/dist /usr/share/nginx/html
 
-# Remover configuración default de nginx
-RUN rm /etc/nginx/conf.d/default.conf
+# Copiar configuración personalizada de nginx
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copiar configuración personalizada
-COPY nginx.conf /etc/nginx/conf.d
+# Exponer puerto 80
+EXPOSE 80
 
-EXPOSE 3000
-
+# Comando para iniciar nginx
 CMD ["nginx", "-g", "daemon off;"]
