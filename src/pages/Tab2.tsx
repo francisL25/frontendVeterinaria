@@ -1,3 +1,7 @@
+// 1. PRIMERO: Crear el archivo components/OwnerSearch.tsx con el código del componente optimizado
+
+// 2. SEGUNDO: En tu Tab2.tsx, hacer estos cambios:
+
 import {
   IonContent,
   IonHeader,
@@ -22,11 +26,14 @@ import {
   IonModal,
   IonText,
   IonLoading,
+  IonList,
 } from '@ionic/react';
+import BackButton from '../components/BackButton';
+import OwnerSearch from '../components/OwnerSearch'; // ✅ AGREGAR esta importación
 import { useContext, useState, useEffect, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { HistorialContext } from '../context/HistorialContext';
-import { checkmarkCircleOutline, closeOutline } from 'ionicons/icons';
+import { checkmarkCircleOutline, closeOutline, searchOutline, personOutline } from 'ionicons/icons';
 import api from '../services/api';
 import UserMenu from '../components/UserMenu';
 import { useIonRouter } from '@ionic/react';
@@ -56,9 +63,9 @@ interface FormData {
   recomendacion: string;
 }
 
+
 const Tab2: React.FC = () => {
   const [pdfFiles, setPdfFiles] = useState<File[]>([]);
-
   const [edadAnios, setEdadAnios] = useState<number | undefined>(undefined);
   const [edadMeses, setEdadMeses] = useState<number | undefined>(undefined);
 
@@ -89,23 +96,17 @@ const Tab2: React.FC = () => {
   const calcularFechaDesdeEdad = useCallback((anios: number, meses: number) => {
     try {
       const hoy = new Date();
-
-      // Copia del año, mes y día actuales
       let year = hoy.getFullYear() - anios;
       let month = hoy.getMonth() - meses;
       let day = hoy.getDate();
 
-      // Ajustar año y mes si el mes resultante es negativo
       while (month < 0) {
         month += 12;
         year--;
       }
 
-      // Evitar fechas inválidas como el 31 de febrero
-      const fechaNacimiento = new Date(year, month, 1); // Comenzamos con el día 1
-      const ultimoDiaDelMes = new Date(year, month + 1, 0).getDate(); // último día de ese mes
-
-      // Establecemos el día más cercano posible (el mínimo entre "hoy.getDate()" y "último día del mes")
+      const fechaNacimiento = new Date(year, month, 1);
+      const ultimoDiaDelMes = new Date(year, month + 1, 0).getDate();
       fechaNacimiento.setDate(Math.min(day, ultimoDiaDelMes));
 
       setFormData((prev) => ({
@@ -116,7 +117,6 @@ const Tab2: React.FC = () => {
       console.error('Error al calcular fecha desde edad:', error);
     }
   }, []);
-
 
   const initialForm: FormData = {
     nombreMascota: '',
@@ -137,7 +137,7 @@ const Tab2: React.FC = () => {
     tratamiento: '',
     diagnostico: '',
     cita: '',
-    doctorAtendio: nombre || '', // Usar el nombre del contexto como valor por defecto
+    doctorAtendio: nombre || '',
     fechaHistorial: '',
     receta: '',
     recomendacion: '',
@@ -152,11 +152,22 @@ const Tab2: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // ✅ AGREGAR esta función para manejar la selección del dueño
+  const handleOwnerSelect = useCallback((owner: { nombreDueno: string; carnetIdentidad: string; telefono: string; direccion: string }) => {
+    setFormData(prev => ({
+      ...prev,
+      nombreDueno: owner.nombreDueno,
+      carnetIdentidad: owner.carnetIdentidad,
+      telefono: owner.telefono,
+      direccion: owner.direccion
+    }));
+  }, []);
+
   const handleInputChange = useCallback((e: CustomEvent) => {
     try {
       const target = e.target as HTMLIonInputElement | HTMLIonSelectElement | HTMLIonTextareaElement;
       const name = target.name;
-      const value = target.value as string;
+      const value = (e.detail as any).value ?? '';
 
       if (name && value !== undefined) {
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -166,24 +177,22 @@ const Tab2: React.FC = () => {
     }
   }, []);
 
-const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean) => {
-  try {
-    setFormData(prev => {
-      if (checked) {
-        if (name === 'castrado') {
-          return { ...prev, castrado: true, esterilizado: false };
-        } else if (name === 'esterilizado') {
-          return { ...prev, castrado: false, esterilizado: true };
+  const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean) => {
+    try {
+      setFormData(prev => {
+        if (checked) {
+          if (name === 'castrado') {
+            return { ...prev, castrado: true, esterilizado: false };
+          } else if (name === 'esterilizado') {
+            return { ...prev, castrado: false, esterilizado: true };
+          }
         }
-      }
-      // Si se está desmarcando, solo actualizamos el valor correspondiente
-      return { ...prev, [name]: checked };
-    });
-  } catch (error) {
-    console.error('Error en handleCheckboxChange:', error);
-  }
-}, []);
-
+        return { ...prev, [name]: checked };
+      });
+    } catch (error) {
+      console.error('Error en handleCheckboxChange:', error);
+    }
+  }, []);
 
   const handleDateChange = useCallback((name: keyof FormData, e: CustomEvent) => {
     try {
@@ -208,10 +217,7 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
       'carnetIdentidad',
       'telefono',
       'direccion',
-      'peso',
-      'anamnesis',
-      'sintomasSignos',
-      'diagnostico'
+      'peso'
     ];
 
     return camposObligatorios.filter(
@@ -229,9 +235,7 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
   }, []);
 
   const validateInputs = useCallback((): boolean => {
-    // Validar fecha de cita si está presente
     if (formData.cita && formData.cita !== 'sin cita') {
-      console.log("entro");
       const citaDate = new Date(formData.cita);
       const now = new Date();
 
@@ -245,35 +249,27 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
         return false;
       }
 
-      // Si es válida, guardar en formato ISO
       formData.cita = citaDate.toISOString();
     } else {
-      // Si no hay cita, mandar null (no string vacío ni "Invalid date")
       formData.cita = null;
     }
 
-
-    // Validar formato de teléfono
     if (!/^(\d{7,8})(\s+\d{7,8})?$/.test(formData.telefono.trim())) {
       showToastMessage('Debe ingresar uno o dos números de teléfono, cada uno con 7 u 8 dígitos');
       return false;
     }
 
-
-    // Validar carnet de identidad (básico)
     if (formData.carnetIdentidad.trim().length < 6) {
       showToastMessage('El carnet de identidad debe tener al menos 6 caracteres');
       return false;
     }
 
-    // Validar peso
     const peso = parseFloat(formData.peso);
     if (isNaN(peso) || peso <= 0 || peso > 200) {
       showToastMessage('El peso debe ser un número válido entre 0.1 y 200 kg');
       return false;
     }
 
-    // Validar fecha de nacimiento
     if (formData.fechaNacimiento) {
       const fechaNac = new Date(formData.fechaNacimiento);
       const hoy = new Date();
@@ -294,7 +290,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
-
     try {
       setIsSubmitting(true);
       setIsLoading(true);
@@ -339,7 +334,7 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
         const { historialFechaId } = response.data;
 
         setShowSuccessModal(true);
-        console.log('Archivos PDF seleccionados:', pdfFiles);
+
         if (pdfFiles.length > 0 && historialFechaId) {
           const formDataDocs = new FormData();
           pdfFiles.forEach(file => {
@@ -358,7 +353,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
           }
         }
 
-        // Limpiar formulario y estados solo UNA vez aquí
         setFormData(initialForm);
         setEdadAnios(undefined);
         setEdadMeses(undefined);
@@ -373,8 +367,8 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
         throw new Error(`Respuesta inesperada del servidor: ${response.status}`);
       }
     } catch (error: any) {
-      // Manejo de errores igual que antes
-      // ...
+      console.error('Error al guardar:', error);
+      showToastMessage('Error al guardar el historial', 'danger');
     } finally {
       setIsSubmitting(false);
       setIsLoading(false);
@@ -402,7 +396,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
     }
   }, [router]);
 
-  // Effect para auto-cerrar modal de éxito
   useEffect(() => {
     let timer: NodeJS.Timeout;
 
@@ -442,7 +435,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
   }, []);
 
   return (
-
     <IonPage>
       <IonHeader>
         <IonToolbar className="detalles-arriba">
@@ -451,12 +443,15 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
       </IonHeader>
 
       <IonContent fullscreen className="ion-padding">
-        <div className="mb-4" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <IonButton routerLink="/tabs/tab1" color="medium">
-            ← Volver
-          </IonButton>
+        {/* Contenedor principal en una sola fila */}
+        <div
+          className="flex flex-wrap gap-4 items-start mb-4"
+          style={{ alignItems: 'flex-start' }}
+        >
+          <BackButton />
 
-          <IonItem lines="none" style={{ flex: 1 }}>
+          {/* Subir documentos PDF */}
+          <IonItem lines="none" className="rounded-lg border-2 flex-0.5 min-w-[200px] p-2">
             <IonLabel position="stacked">Subir documentos (PDF)</IonLabel>
             <input
               name="documentos"
@@ -474,12 +469,16 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
               style={{ marginTop: '8px', display: 'block' }}
             />
           </IonItem>
+
+          {/* ✅ REEMPLAZAR toda la sección de búsqueda anterior con esto: */}
+          <OwnerSearch
+            onOwnerSelect={handleOwnerSelect}
+            onError={(message) => showToastMessage(message, 'danger')}
+            onSuccess={(message) => showToastMessage(message, 'success')}
+            disabled={isSubmitting}
+          />
         </div>
-
-
         <IonGrid>
-
-
           {/* Fila 1: Información básica de la mascota */}
           <IonRow>
             <IonCol size="12" sizeMd="3">
@@ -551,7 +550,7 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
                   isOpen={openPicker === 'fechaNacimiento'}
                   onDidDismiss={() => setOpenPicker('')}
                 >
-                  <div className="p-4 w-64">
+                  <div className="p-4 w-45">
                     <IonLabel>Selecciona Edad Aproximada</IonLabel>
 
                     <IonSelect
@@ -595,14 +594,14 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
           <IonRow>
             <IonCol size="12" sizeMd="3">
               <IonItem className="rounded-lg border border-gray-300 shadow-sm" lines="none">
-                <IonLabel position="stacked" className="font-semibold text-gray-700">
-                  Sexo *
-                </IonLabel>
+                <IonLabel position="stacked" className="font-semibold text-gray-700">Sexo *</IonLabel>
                 <IonSelect
                   name="sexo"
                   value={formData.sexo}
                   onIonChange={handleInputChange}
                   placeholder="Seleccione"
+                  interface="popover"
+                  className="text-left"
                 >
                   <IonSelectOption value="Macho">Macho</IonSelectOption>
                   <IonSelectOption value="Hembra">Hembra</IonSelectOption>
@@ -670,7 +669,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
                   onIonInput={handleInputChange}
                   placeholder="Dirección completa"
                   clearInput
-                  maxlength={200}
                 />
               </IonItem>
             </IonCol>
@@ -726,7 +724,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
                   value={formData.seniaParticular}
                   onIonInput={handleInputChange}
                   rows={2}
-                  maxlength={500}
                   placeholder="Describe características distintivas..."
                 />
               </IonItem>
@@ -744,7 +741,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
                   value={formData.anamnesis}
                   onIonInput={handleInputChange}
                   rows={3}
-                  maxlength={1000}
                   placeholder="Historia clínica y antecedentes..."
                 />
               </IonItem>
@@ -762,7 +758,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
                   value={formData.sintomasSignos}
                   onIonInput={handleInputChange}
                   rows={3}
-                  maxlength={1000}
                   placeholder="Describe los síntomas observados..."
                 />
               </IonItem>
@@ -780,7 +775,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
                   value={formData.tratamiento}
                   onIonInput={handleInputChange}
                   rows={3}
-                  maxlength={1000}
                   placeholder="Describe el tratamiento aplicado..."
                 />
               </IonItem>
@@ -798,7 +792,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
                   value={formData.diagnostico}
                   onIonInput={handleInputChange}
                   rows={3}
-                  maxlength={1000}
                   placeholder="Diagnóstico veterinario..."
                 />
               </IonItem>
@@ -816,7 +809,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
                   value={formData.receta}
                   onIonInput={handleInputChange}
                   rows={3}
-                  maxlength={1000}
                   placeholder="Receta veterinario..."
                 />
               </IonItem>
@@ -834,7 +826,6 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
                   value={formData.recomendacion}
                   onIonInput={handleInputChange}
                   rows={3}
-                  maxlength={1000}
                   placeholder="Recomendación veterinario..."
                 />
               </IonItem>
@@ -852,9 +843,7 @@ const handleCheckboxChange = useCallback((name: keyof FormData, checked: boolean
                   name="doctorAtendio"
                   value={formData.doctorAtendio}
                   onIonInput={handleInputChange}
-                  placeholder="Nombre del veterinario"
                   clearInput
-                  maxlength={100}
                 />
               </IonItem>
             </IonCol>

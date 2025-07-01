@@ -92,7 +92,7 @@ const CitasMedicasModal: React.FC<CitasMedicasModalProps> = ({ isOpen, onClose }
   return (
     <IonModal isOpen={isOpen} onDidDismiss={handleClose}>
       <IonHeader>
-        <IonToolbar>
+        <IonToolbar className='color-boton'>
           <IonTitle>Citas Médicas - {dayjs().add(1, 'day').format('DD/MM/YYYY')}</IonTitle>
           <IonButtons slot="end">
             <IonButton onClick={handleClose} fill="clear">

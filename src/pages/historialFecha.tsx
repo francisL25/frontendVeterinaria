@@ -116,10 +116,11 @@ const DetallesHistorial: React.FC = () => {
                     <td className="px-4 py-2 border">{h.diagnostico}</td>
                     <td className="px-4 py-2 border">{h.doctorAtendio}</td>
                     <td className="px-4 py-2 border text-center">
-                      <IonButton size="small" fill="outline" onClick={() => abrirModal(h)}>
+                      <IonButton className="color-boton" size="small"  onClick={() => abrirModal(h)}>
                         {new Date(h.fechaHistorial).toLocaleString()}
                       </IonButton>
                       <IonButton
+                      className="color-boton"
                         size="small"
                         fill="solid"
                         onClick={() => history.push(`/edit-tab/${h.id}?idH=${idH}`)}

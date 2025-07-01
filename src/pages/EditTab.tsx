@@ -20,6 +20,7 @@ import {
   IonToast,
   IonIcon,
 } from '@ionic/react';
+import BackButton from '../components/BackButton';
 import { useContext, useState, useEffect } from 'react';
 import { useParams, useLocation, useHistory } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -191,20 +192,20 @@ const EditTab: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-const handleCheckboxChange = (name: string, checked: boolean) => {
-  setFormData(prev => {
-    if (checked) {
-      if (name === 'castrado') {
-        return { ...prev, castrado: true, esterilizado: false };
+  const handleCheckboxChange = (name: string, checked: boolean) => {
+    setFormData(prev => {
+      if (checked) {
+        if (name === 'castrado') {
+          return { ...prev, castrado: true, esterilizado: false };
+        }
+        if (name === 'esterilizado') {
+          return { ...prev, castrado: false, esterilizado: true };
+        }
       }
-      if (name === 'esterilizado') {
-        return { ...prev, castrado: false, esterilizado: true };
-      }
-    }
-    // Si se desmarca, solo actualizamos ese campo
-    return { ...prev, [name]: checked };
-  });
-};
+      // Si se desmarca, solo actualizamos ese campo
+      return { ...prev, [name]: checked };
+    });
+  };
 
 
   const handleDateChange = (name: string, e: CustomEvent) => {
@@ -232,11 +233,6 @@ const handleCheckboxChange = (name: string, checked: boolean) => {
       'telefono',
       'direccion',
       'peso',
-      'anamnesis',
-      'sintomasSignos',
-      'diagnostico',
-      'receta',
-      'recomendacion'
     ];
 
     const camposFaltantes = camposObligatorios.filter(
@@ -249,9 +245,9 @@ const handleCheckboxChange = (name: string, checked: boolean) => {
     }
 
     // Validar formato de teléfono
-    if (!/^\d{7,8}$/.test(formData.telefono)) {
-      showToastMessage('El teléfono debe tener 7 u 8 dígitos numéricos', 'danger');
-      return;
+    if (!/^(\d{7,8})(\s+\d{7,8})?$/.test(formData.telefono.trim())) {
+      showToastMessage('Debe ingresar uno o dos números de teléfono, cada uno con 7 u 8 dígitos', 'danger');
+      return false;
     }
 
     // Validar peso
@@ -301,7 +297,7 @@ const handleCheckboxChange = (name: string, checked: boolean) => {
       if (historialFechaResponse.status === 'fulfilled' &&
         historialFechaResponse.value.status === 201) {
         const { historialFechaId } = historialFechaResponse.value.data;
-        
+
         if (pdfFiles.length > 0 && historialFechaId) {
           const formDataDocs = new FormData();
           pdfFiles.forEach(file => {
@@ -377,16 +373,9 @@ const handleCheckboxChange = (name: string, checked: boolean) => {
       </IonHeader>
 
       <IonContent fullscreen className="ion-padding">
-        <div className="mb-6">
-          <IonButton
-            routerLink={`/historial/${idH}`}
-            color="medium"
-            fill="solid"
-            className="ion-no-padding ion-align-items-center"
-          >
-            ← Volver al Historial
-          </IonButton>
-          <IonItem lines="none" style={{ flex: 1 }}>
+        <div className="mb-4" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <BackButton />
+          <IonItem lines="none" className="rounded-lg border-2 min-w-[200px] p-2">
             <IonLabel position="stacked">Subir documentos (PDF)</IonLabel>
             <input
               name="documentos"
@@ -525,7 +514,7 @@ const handleCheckboxChange = (name: string, checked: boolean) => {
 
           {/* Fila 3 */}
           <IonRow className="ion-margin-vertical">
-            <IonCol size="12">
+            <IonCol size="12" sizeMd="6">
               <IonItem className="rounded-md border border-gray-300" lines="none">
                 <IonLabel position="stacked" className="text-gray-700 font-semibold">Dirección *</IonLabel>
                 <IonInput
@@ -537,11 +526,7 @@ const handleCheckboxChange = (name: string, checked: boolean) => {
                 />
               </IonItem>
             </IonCol>
-          </IonRow>
-
-          {/* Fila 4 */}
-          <IonRow className="ion-margin-vertical items-center">
-            <IonCol size="12" sizeMd="6">
+            <IonCol size="12" sizeMd="2">
               <IonItem className="rounded-md border border-gray-300" lines="none">
                 <IonLabel position="stacked" className="text-gray-700 font-semibold">Peso (kg) *</IonLabel>
                 <IonInput
@@ -557,7 +542,7 @@ const handleCheckboxChange = (name: string, checked: boolean) => {
               </IonItem>
             </IonCol>
 
-            <IonCol size="12" sizeMd="3">
+            <IonCol size="12" sizeMd="2">
               <IonItem lines="none" className="flex items-center gap-2 rounded-md border border-gray-300 p-2">
                 <IonCheckbox
                   checked={formData.castrado}
@@ -568,7 +553,7 @@ const handleCheckboxChange = (name: string, checked: boolean) => {
               </IonItem>
             </IonCol>
 
-            <IonCol size="12" sizeMd="3">
+            <IonCol size="12" sizeMd="2">
               <IonItem lines="none" className="flex items-center gap-2 rounded-md border border-gray-300 p-2">
                 <IonCheckbox
                   checked={formData.esterilizado}
@@ -578,6 +563,11 @@ const handleCheckboxChange = (name: string, checked: boolean) => {
                 <IonLabel className="text-gray-700 font-semibold mb-0">Esterilizado</IonLabel>
               </IonItem>
             </IonCol>
+          </IonRow>
+
+          {/* Fila 4 */}
+          <IonRow className="ion-margin-vertical items-center">
+
           </IonRow>
 
           {/* Fila 5 */}
