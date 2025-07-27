@@ -95,19 +95,39 @@ const Tab2: React.FC = () => {
 
   const calcularFechaDesdeEdad = useCallback((anios: number, meses: number) => {
     try {
+      // Validar que los valores sean números válidos
+      if (isNaN(anios) || isNaN(meses) || anios < 0 || meses < 0) {
+        console.warn('Valores de edad inválidos:', { anios, meses });
+        return;
+      }
+
       const hoy = new Date();
       let year = hoy.getFullYear() - anios;
       let month = hoy.getMonth() - meses;
       let day = hoy.getDate();
 
+      // Ajustar el mes si es negativo
       while (month < 0) {
         month += 12;
         year--;
       }
 
+      // Crear la fecha de nacimiento
       const fechaNacimiento = new Date(year, month, 1);
       const ultimoDiaDelMes = new Date(year, month + 1, 0).getDate();
       fechaNacimiento.setDate(Math.min(day, ultimoDiaDelMes));
+
+      // Validar que la fecha calculada no sea futura
+      if (fechaNacimiento > hoy) {
+        console.warn('La fecha calculada es futura, usando fecha actual');
+        setFormData((prev) => ({
+          ...prev,
+          fechaNacimiento: hoy.toISOString(),
+        }));
+        return;
+      }
+
+      console.log('Fecha calculada:', { anios, meses, fecha: fechaNacimiento.toISOString() });
 
       setFormData((prev) => ({
         ...prev,
@@ -367,25 +387,32 @@ const Tab2: React.FC = () => {
         throw new Error(`Respuesta inesperada del servidor: ${response.status}`);
       }
     } catch (error: any) {
-      console.error('Error al guardar:', error);
-      showToastMessage('Error al guardar el historial', 'danger');
+  console.error('Error al guardar:', error);
+
+  if (error.response && error.response.status === 409) {
+    const mensaje = error.response.data?.message || 'Ya existe un historial con esa mascota y dueño';
+    showToastMessage(mensaje, 'danger');
+  } else {
+    showToastMessage('Error al guardar el historial', 'danger');
+  }
     } finally {
       setIsSubmitting(false);
       setIsLoading(false);
     }
   }, [isSubmitting, validateForm, validateInputs, formData, nombre, triggerRefetch, initialForm, showToastMessage, pdfFiles]);
 
-  const handleClearForm = useCallback(() => {
-    try {
-      setFormData(initialForm);
-      setEdadAnios(undefined);
-      setEdadMeses(undefined);
-      setOpenPicker('');
-      showToastMessage('Formulario limpiado', 'warning');
-    } catch (error) {
-      console.error('Error al limpiar formulario:', error);
-    }
-  }, [initialForm, showToastMessage]);
+const handleClearForm = useCallback(() => {
+  try {
+    setFormData(initialForm);
+    setEdadAnios(undefined); // Cambiar a undefined en lugar de 0
+    setEdadMeses(undefined); // Cambiar a undefined en lugar de 0
+    setPdfFiles([]);
+    setOpenPicker('');
+    showToastMessage('Formulario limpiado', 'warning');
+  } catch (error) {
+    console.error('Error al limpiar formulario:', error);
+  }
+}, [initialForm, showToastMessage]);
 
   const closeSuccessModal = useCallback(() => {
     try {
@@ -527,67 +554,124 @@ const Tab2: React.FC = () => {
               </IonItem>
             </IonCol>
 
-            <IonCol size="12" sizeMd="3">
-              <IonItem className="rounded-lg border border-gray-300 shadow-sm" lines="none">
-                <IonLabel position="stacked" className="font-semibold text-gray-700">
-                  Edad / Fecha Nacimiento *
-                </IonLabel>
+<IonCol size="12" sizeMd="3">
+  <IonItem className="rounded-lg border border-gray-300 shadow-sm" lines="none">
+    <IonLabel position="stacked" className="font-semibold text-gray-700">
+      Edad / Fecha Nacimiento *
+    </IonLabel>
 
-                <IonButton
-                  id="edadButton"
-                  fill="clear"
-                  color="dark"
-                  onClick={() => setOpenPicker('fechaNacimiento')}
-                  disabled={isSubmitting}
-                >
-                  {formData.fechaNacimiento
-                    ? formatDate(formData.fechaNacimiento)
-                    : 'Seleccionar Edad'}
-                </IonButton>
+    <IonButton
+      id="edadButton"
+      fill="clear"
+      color="dark"
+      onClick={() => setOpenPicker('fechaNacimiento')}
+      disabled={isSubmitting}
+      style={{ justifyContent: 'flex-start', textAlign: 'left' }}
+    >
+      {formData.fechaNacimiento
+        ? `${formatDate(formData.fechaNacimiento)} ${
+            edadAnios !== undefined && edadMeses !== undefined
+              ? `(${edadAnios}a ${edadMeses}m)`
+              : ''
+          }`
+        : 'Seleccionar Edad'}
+    </IonButton>
 
-                <IonPopover
-                  trigger="edadButton"
-                  isOpen={openPicker === 'fechaNacimiento'}
-                  onDidDismiss={() => setOpenPicker('')}
-                >
-                  <div className="p-4 w-45">
-                    <IonLabel>Selecciona Edad Aproximada</IonLabel>
+    <IonPopover
+      trigger="edadButton"
+      isOpen={openPicker === 'fechaNacimiento'}
+      onDidDismiss={() => setOpenPicker('')}
+      alignment="center"
+    >
+      <div className="p-4 min-w-[280px]">
+        <IonLabel className="block mb-3 font-bold text-center">
+          Selecciona Edad Aproximada
+        </IonLabel>
 
-                    <IonSelect
-                      placeholder="Años"
-                      value={edadAnios}
-                      onIonChange={(e) => {
-                        const anios = parseInt(e.detail.value, 10);
-                        if (!isNaN(anios)) {
-                          setEdadAnios(anios);
-                          calcularFechaDesdeEdad(anios, edadMeses ?? 0);
-                        }
-                      }}
-                    >
-                      {[...Array(51)].map((_, i) => (
-                        <IonSelectOption key={i} value={i}>{i} años</IonSelectOption>
-                      ))}
-                    </IonSelect>
+        <div className="space-y-3">
+          <div>
+            <IonLabel className="block mb-1 text-sm font-medium">Años:</IonLabel>
+            <IonSelect
+              interface="popover"
+              placeholder="Seleccionar años"
+              value={edadAnios}
+              onIonChange={(e) => {
+                const anios = parseInt(e.detail.value, 10);
+                console.log('Años seleccionados:', anios);
+                
+                if (!isNaN(anios) && anios >= 0) {
+                  setEdadAnios(anios);
+                  // Solo calcular si también tenemos meses válidos
+                  const mesesActuales = edadMeses || 0;
+                  calcularFechaDesdeEdad(anios, mesesActuales);
+                } else {
+                  console.warn('Valor de años inválido:', anios);
+                }
+              }}
+            >
+              {Array.from({ length: 31 }, (_, i) => (
+                <IonSelectOption key={i} value={i}>
+                  {i} {i === 1 ? 'año' : 'años'}
+                </IonSelectOption>
+              ))}
+            </IonSelect>
+          </div>
 
-                    <IonSelect
-                      placeholder="Meses"
-                      value={edadMeses}
-                      onIonChange={(e) => {
-                        const meses = parseInt(e.detail.value, 10);
-                        if (!isNaN(meses)) {
-                          setEdadMeses(meses);
-                          calcularFechaDesdeEdad(edadAnios ?? 0, meses);
-                        }
-                      }}
-                    >
-                      {[...Array(12)].map((_, i) => (
-                        <IonSelectOption key={i} value={i}>{i} meses</IonSelectOption>
-                      ))}
-                    </IonSelect>
-                  </div>
-                </IonPopover>
-              </IonItem>
-            </IonCol>
+          <div>
+            <IonLabel className="block mb-1 text-sm font-medium">Meses:</IonLabel>
+            <IonSelect
+              interface="popover"
+              placeholder="Seleccionar meses"
+              value={edadMeses}
+              onIonChange={(e) => {
+                const meses = parseInt(e.detail.value, 10);
+                console.log('Meses seleccionados:', meses);
+                
+                if (!isNaN(meses) && meses >= 0 && meses < 12) {
+                  setEdadMeses(meses);
+                  // Solo calcular si también tenemos años válidos
+                  const aniosActuales = edadAnios || 0;
+                  calcularFechaDesdeEdad(aniosActuales, meses);
+                } else {
+                  console.warn('Valor de meses inválido:', meses);
+                }
+              }}
+            >
+              {Array.from({ length: 12 }, (_, i) => (
+                <IonSelectOption key={i} value={i}>
+                  {i} {i === 1 ? 'mes' : 'meses'}
+                </IonSelectOption>
+              ))}
+            </IonSelect>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t">
+          <IonButton
+            expand="block"
+            size="small"
+            fill="clear"
+            color="primary"
+            onClick={() => {
+              setEdadAnios(0);
+              setEdadMeses(0);
+              setFormData(prev => ({ ...prev, fechaNacimiento: '' }));
+            }}
+          >
+            Limpiar Selección
+          </IonButton>
+        </div>
+
+        {formData.fechaNacimiento && (
+          <div className="mt-3 p-2 bg-gray-100 rounded text-sm text-center">
+            <strong>Fecha calculada:</strong><br />
+            {formatDate(formData.fechaNacimiento)}
+          </div>
+        )}
+      </div>
+    </IonPopover>
+  </IonItem>
+</IonCol>
           </IonRow>
 
           {/* Fila 2: Información del dueño */}

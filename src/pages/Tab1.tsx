@@ -156,10 +156,9 @@ const Tab1: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar className="detalles-arriba">
-          <UserMenu titulo="Historiales" />
+          <UserMenu titulo="HISTORIALES" />
         </IonToolbar>
       </IonHeader>
-
       <IonContent fullscreen className="p-4">
         <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-2">
           {/* Botón Agregar */}
@@ -168,17 +167,24 @@ const Tab1: React.FC = () => {
             onClick={() => router.push('/tabs/tab2', 'forward')}
             className="w-full md:w-auto min-w-fit color-boton"
           >
-            + Agregar Historial Nuevo
+            ➕ Agregar Historial Nuevo
+          </IonButton>
+          <IonButton
+            size="default"
+            onClick={() => router.push('/grupos', 'forward')}
+            className="w-full md:w-auto min-w-fit color-boton"
+          >
+            📦 Inventario
           </IonButton>
           <IonButton
             size="default"
             onClick={() => setModalCitasOpen(true)}
             className="w-full md:w-auto min-w-fit color-boton"
           >
-            Ver Citas Médicas
+            🗓️ Ver Citas Médicas
           </IonButton>
           {/* Barra de búsqueda */}
-          <div className="flex items-center w-full md:w-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-md px-3 py-2 gap-2 border border-gray-300">
+          <div className="flex items-center w-full md:w-2/5 bg-white dark:bg-gray-800 rounded-lg shadow-md px-3 py-2 gap-2 border border-gray-300">
             <IonIcon icon={searchOutline} className="text-gray-500 text-xl flex-shrink-0" />
             <IonInput
               placeholder="Buscar por nombre de mascota, dueño, C.I..."

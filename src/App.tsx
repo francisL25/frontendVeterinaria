@@ -6,7 +6,10 @@ import Tab1 from './pages/Tab1';
 import Tab2 from './pages/Tab2';
 import Tab3 from './pages/Tab3'; // ✅ NUEVA IMPORTACIÓN
 import EditTab from './pages/EditTab';
+import ProductosPage from './pages/ProductosPage';
 import HistorialFecha from './pages/historialFecha';
+import ReporteMensual from './pages/ReporteMensual';
+import GruposPage from './pages/GruposPage';
 import { AuthProvider } from './context/AuthContext';
 import { HistorialProvider } from './context/HistorialContext';
 
@@ -51,6 +54,15 @@ const App: React.FC = () => (
             </Route>
             <Route exact path="/edit-tab/:id">
               <EditTab />
+            </Route>
+            <Route exact path="/productosPage/:id">
+              <ProductosPage />
+            </Route>
+            <Route exact path="/reporte-mensual">
+              <ReporteMensual />
+            </Route>
+            <Route exact path="/grupos">
+              <GruposPage />
             </Route>
             <Route exact path="/historial/:id">
               <HistorialFecha />

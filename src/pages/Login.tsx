@@ -59,7 +59,7 @@ const Login: React.FC = () => {
       <IonHeader>
         <IonToolbar className="detalles-arriba">
           <IonTitle className="custom-title">
-            CLÍNICA VETERINARIA QUERUBINES
+            🏨 CLÍNICA VETERINARIA QUERUBINES
           </IonTitle>
         </IonToolbar>
       </IonHeader>

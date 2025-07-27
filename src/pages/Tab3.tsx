@@ -38,8 +38,10 @@ dayjs.extend(duration);
 dayjs.extend(relativeTime);
 
 function edadTextoAFecha(edad: string): string {
+  // Actualizar regex para manejar solo meses
   const match = edad.match(/(?:(\d+)\s*años?)?\s*(?:(\d+)\s*mes(?:es)?)?/i);
   if (!match) return '';
+  
   const anios = parseInt(match[1] ?? '0');
   const meses = parseInt(match[2] ?? '0');
 
@@ -51,17 +53,41 @@ function edadTextoAFecha(edad: string): string {
 }
 
 function calcularEdadStr(fechaNacimientoStr: string): string {
-  const hoy = dayjs();
-  const nacimiento = dayjs(fechaNacimientoStr);
+  const hoy = new Date();
+  const fechaNacimiento = new Date(fechaNacimientoStr);
 
-  if (!nacimiento.isValid()) return 'Fecha inválida';
+  let anios = hoy.getFullYear() - fechaNacimiento.getFullYear();
+  let meses = hoy.getMonth() - fechaNacimiento.getMonth();
 
-  const años = hoy.diff(nacimiento, 'year');
-  const meses = hoy.diff(nacimiento.add(años, 'year'), 'month');
+  // Ajustar si el día actual es menor al día de nacimiento
+  if (hoy.getDate() < fechaNacimiento.getDate()) {
+    meses--;
+  }
 
-  return `${años} año${años !== 1 ? 's' : ''} y ${meses} mes${meses !== 1 ? 'es' : ''}`;
+  // Si los meses son negativos, ajustar años y meses
+  if (meses < 0) {
+    anios--;
+    meses += 12;
+  }
+
+  // Asegurarse de que no tengamos valores negativos
+  if (anios < 0) {
+    anios = 0;
+    // Recalcular meses desde el nacimiento
+    const totalMeses = (hoy.getFullYear() - fechaNacimiento.getFullYear()) * 12 + 
+                      (hoy.getMonth() - fechaNacimiento.getMonth());
+    meses = Math.max(0, totalMeses - (hoy.getDate() < fechaNacimiento.getDate() ? 1 : 0));
+  }
+
+  // Formatear el resultado
+  if (anios === 0) {
+    return `${meses} mes${meses !== 1 ? 'es' : ''}`;
+  } else if (meses === 0) {
+    return `${anios} año${anios !== 1 ? 's' : ''}`;
+  } else {
+    return `${anios} año${anios !== 1 ? 's' : ''} y ${meses} mes${meses !== 1 ? 'es' : ''}`;
+  }
 }
-
 const Tab3: React.FC = () => {
   const history = useHistory();
   const { idH } = useParams<{ idH: string }>();

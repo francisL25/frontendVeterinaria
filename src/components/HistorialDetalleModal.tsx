@@ -149,18 +149,14 @@ const calculateAge = useCallback((birthDateStr: string): string => {
   }, []);
 
   // Función para formatear solo fecha
-  const formatDate = useCallback((dateStr: string): string => {
-    if (!dateStr) return '-';
-    
-    try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return '-';
-      
-      return date.toLocaleDateString('es-ES');
-    } catch {
-      return '-';
-    }
-  }, []);
+ const formatDate = useCallback((dateStr: string): string => {
+  if (!dateStr) return '-';
+
+  const parsed = dayjs(dateStr);
+  if (!parsed.isValid()) return '-';
+
+  return parsed.format('D MMM YYYY').replace('.', ''); // 24 jun 2025
+}, []);
 
   // Función para ver documento PDF usando fetch con Bearer token
   const verDocumento = useCallback(async (doc: Documento) => {
