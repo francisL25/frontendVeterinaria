@@ -25,6 +25,7 @@ import 'dayjs/locale/es';
 import duration from 'dayjs/plugin/duration';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import BackButton from '../components/BackButton';
+import EditarProductoModal from '../components/EditarProductoModal';
 
 dayjs.locale('es');
 dayjs.extend(duration);
@@ -42,6 +43,7 @@ type ModalType = 'vender' | 'ventas' | 'ingresos';
 type ToastColor = 'success' | 'danger' | 'warning';
 
 const ProductosPage: React.FC = () => {
+    const [showEditModal, setShowEditModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -58,6 +60,72 @@ const ProductosPage: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const router = useIonRouter();
     const [selectedOptionId, setSelectedOptionId] = useState<{ [key: number]: string }>({});
+    const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+    const { id } = useParams<{ id: string }>();
+    console.log('Grupo ID desde query params:', id);
+
+    const showToastMessage = (message: string, color: ToastColor = 'danger') => {
+        setToastMessage(message);
+        setToastColor(color);
+        setShowToast(true);
+    };
+
+    const fetchProductos = useCallback(async () => {
+        try {
+            setInitialLoading(true);
+            const response = await api.get('/productos', { params: { id_grupo: id } });
+            console.log('Productos cargados:', response.data);
+            setProductos(response.data);
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Error al cargar productos';
+            showToastMessage(errorMessage);
+        } finally {
+            setInitialLoading(false);
+        }
+    }, [id]);
+
+    const searchProductos = useCallback(async () => {
+        if (searchTerm.trim() === '') return;
+        try {
+            setSearchLoading(true);
+            const response = await api.get('/productos/buscar', {
+                params: {
+                    texto: searchTerm.trim(),
+                    id_grupo: id,
+                },
+            });
+            setProductos(response.data);
+            setCurrentPage(1);
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'No se encontraron resultados';
+            showToastMessage(errorMessage, 'warning');
+            setProductos([]);
+        } finally {
+            setSearchLoading(false);
+        }
+    }, [searchTerm, id]);
+
+    useEffect(() => {
+        if (!hasLoadedOnce && searchTerm.trim() === '') {
+            fetchProductos();
+            setHasLoadedOnce(true);
+        }
+    }, [hasLoadedOnce, fetchProductos, searchTerm]);
+
+    useEffect(() => {
+        if (hasLoadedOnce) {
+            fetchProductos();
+        }
+    }, [refetchFlag]);
+
+    useEffect(() => {
+        if (searchTerm.trim() === '') return;
+        const timeoutId = setTimeout(() => {
+            searchProductos();
+        }, 500);
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm, searchProductos]);
 
     const totalPages = Math.ceil(productos.length / itemsPerPage);
     const paginatedProductos = productos.slice(
@@ -65,86 +133,16 @@ const ProductosPage: React.FC = () => {
         currentPage * itemsPerPage
     );
 
-    const showToastMessage = useCallback((message: string, color: ToastColor = 'danger') => {
-        setToastMessage(message);
-        setToastColor(color);
-        setShowToast(true);
-    }, []);
-    const { id } = useParams<{ id: string }>();
-    console.log('Grupo ID desde query params:', id);
-
-    const fetchProductos = useCallback(async () => {
-        try {
-            setInitialLoading(true);
-            const response = await api.get('/productos', {
-                params: {
-                    id_grupo: id // cambia 3 por el valor dinámico que necesites
-                }
-            });
-            console.log('Productos cargados:', response.data);
-            setProductos(response.data);
-        } catch (error: any) {
-            console.error('Error al cargar productos:', error);
-            const errorMessage = error.response?.data?.message || 'Error al cargar productos';
-            showToastMessage(errorMessage);
-        } finally {
-            setInitialLoading(false);
-        }
-    }, [showToastMessage]);
-
-    const searchProductos = useCallback(async () => {
-        if (searchTerm.trim() === '') {
-            fetchProductos();
-            return;
-        }
-        try {
-            setSearchLoading(true);
-            const response = await api.get('/productos/buscar', {
-                params: { 
-                    texto: searchTerm.trim(),
-                    id_grupo: id,
-                },
-                
-            });
-            setProductos(response.data);
-            setCurrentPage(1); // Resetear página al buscar
-        } catch (error: any) {
-            console.error('Error al buscar productos:', error);
-            const errorMessage = error.response?.data?.message || 'No se encontraron resultados';
-            showToastMessage(errorMessage, 'warning');
-            setProductos([]); // Limpiar productos si no se encuentran
-        } finally {
-            setSearchLoading(false);
-        }
-    }, [searchTerm, fetchProductos, showToastMessage]);
-
-    useEffect(() => {
-        fetchProductos();
-    }, [refetchFlag, fetchProductos]);
-
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            searchProductos();
-        }, 500); // Incrementar delay para mejor UX
-        return () => clearTimeout(timeoutId);
-    }, [searchTerm, searchProductos]);
-
     const formatDate = useCallback((dateString: string) => {
-        try {
-            const date = dayjs(dateString);
-            return date.isValid() ? date.format('D MMM YYYY') : 'Fecha inválida';
-        } catch (error) {
-            return 'Fecha inválida';
-        }
+        const date = dayjs(dateString);
+        return date.isValid() ? date.format('D MMM YYYY') : 'Fecha inválida';
     }, []);
 
     const formatPrice = useCallback((price: number | string | null | undefined) => {
         const parsedPrice = typeof price === 'string' ? parseFloat(price) : price;
-
         if (parsedPrice === null || parsedPrice === undefined || isNaN(parsedPrice)) {
             return 'Precio inválido';
         }
-
         return new Intl.NumberFormat('es-BO', {
             style: 'currency',
             currency: 'BOB',
@@ -152,23 +150,18 @@ const ProductosPage: React.FC = () => {
         }).format(parsedPrice);
     }, []);
 
-
     const handleOptionChange = useCallback((productoId: number, option: string) => {
         if (option === '') return;
-
         const producto = productos.find(p => p.id === productoId);
         if (!producto) {
             showToastMessage('Producto no encontrado', 'danger');
             return;
         }
-
         setSelectedProduct(producto);
         setModalType(option as ModalType);
         setShowModal(true);
-
-        // Resetear el select para que vuelva a "Opciones"
         setSelectedOptionId(prev => ({ ...prev, [productoId]: '' }));
-    }, [productos, showToastMessage]);
+    }, [productos]);
 
     const handleCloseModal = useCallback(() => {
         setShowModal(false);
@@ -179,12 +172,22 @@ const ProductosPage: React.FC = () => {
     const handleVentaRegistrada = useCallback(() => {
         fetchProductos();
         showToastMessage('Venta registrada correctamente', 'success');
-    }, [fetchProductos, showToastMessage]);
+    }, [fetchProductos]);
 
     const handleProductoCreado = useCallback(() => {
         fetchProductos();
         showToastMessage('Producto creado correctamente', 'success');
-    }, [fetchProductos, showToastMessage]);
+    }, [fetchProductos]);
+
+    const handleEditProduct = (producto: Producto) => {
+        setSelectedProduct(producto);
+        setShowEditModal(true);
+    };
+
+    const handleProductoActualizado = useCallback(() => {
+        fetchProductos();
+        showToastMessage('Producto actualizado correctamente', 'success');
+    }, [fetchProductos]);
 
     const getStockColor = useCallback((stock: number) => {
         if (stock > 10) return 'bg-green-100 text-green-800';
@@ -248,7 +251,7 @@ const ProductosPage: React.FC = () => {
                                 <th className="px-4 py-2">Fecha de Vencimiento</th>
                                 <th className="px-4 py-2">Precio Unidad</th>
                                 <th className="px-4 py-2">Stock</th>
-                                
+
                                 <th className="px-4 py-2 text-center">Acción</th>
                             </tr>
                         </thead>
@@ -271,23 +274,35 @@ const ProductosPage: React.FC = () => {
                                                 {producto.stock} unidades
                                             </span>
                                         </td>
-                                        
+
                                         <td className="px-4 py-2 text-center">
-                                            <select
-                                                style={{ backgroundColor: '#019391' }}
-                                                value={selectedOptionId[producto.id] || ''}
-                                                onChange={(e) => handleOptionChange(producto.id, e.target.value)}
-                                                className="appearance-none bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400 hover:bg-teal-700 transition duration-200 ease-in-out w-full max-w-[130px] text-center"
-                                                disabled={initialLoading}
-                                            >
-                                                <option value="" disabled>
-                                                    Opciones
-                                                </option>
-                                                <option value="vender">Vender</option>
-                                                <option value="ventas">Ventas</option>
-                                                <option value="ingresos">Ingresos</option>
-                                            </select>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <select
+                                                    style={{ backgroundColor: '#019391' }}
+                                                    value={selectedOptionId[producto.id] || ''}
+                                                    onChange={(e) => handleOptionChange(producto.id, e.target.value)}
+                                                    className="appearance-none bg-teal-600 text-white font-semibold px-3 py-1 rounded-lg shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400 hover:bg-teal-700 transition duration-200 ease-in-out max-w-[130px] text-center"
+                                                    disabled={initialLoading}
+                                                >
+                                                    <option value="" disabled>
+                                                        Opciones
+                                                    </option>
+                                                    <option value="vender">Vender</option>
+                                                    <option value="ventas">Ventas</option>
+                                                    <option value="ingresos">Ingresos</option>
+                                                </select>
+
+                                                <button
+                                                    onClick={() => handleEditProduct(producto)}
+                                                    style={{ backgroundColor: '#019391' }}
+                                                    className="text-white bg-blue-600 hover:bg-blue-700 font-semibold py-1 px-3 rounded-lg text-sm transition"
+                                                >
+                                                    ✏️ Editar
+                                                </button>
+                                            </div>
                                         </td>
+
+
                                     </tr>
                                 ))
                             )}
@@ -341,6 +356,13 @@ const ProductosPage: React.FC = () => {
                     onProductoCreado={handleProductoCreado}
                     idGrupo={id}
                 />
+                <EditarProductoModal
+                    isOpen={showEditModal}
+                    onDidDismiss={() => setShowEditModal(false)}
+                    onProductoActualizado={handleProductoActualizado}
+                    producto={selectedProduct}
+                />
+
             </IonContent>
         </IonPage>
     );

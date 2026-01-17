@@ -39,6 +39,7 @@ interface Historial {
 }
 
 const Tab1: React.FC = () => {
+  const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -52,11 +53,11 @@ const Tab1: React.FC = () => {
   const router = useIonRouter();
   const [modalCitasOpen, setModalCitasOpen] = useState(false);
 
-  const totalPages = Math.ceil(historiales.length / itemsPerPage);
-  const paginatedHistoriales = historiales.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+
+  const paginatedHistoriales = historiales; // ya viene paginado del backend
+
   // Función para mostrar toast
   const showToastMessage = useCallback((message: string, color: 'success' | 'danger' | 'warning' = 'danger') => {
     setToastMessage(message);
@@ -65,18 +66,29 @@ const Tab1: React.FC = () => {
   }, []);
 
   // Función para obtener todos los historiales
-  const fetchHistoriales = useCallback(async () => {
+  const fetchHistoriales = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const response = await api.get('/historial');
-      setHistoriales(response.data);
-    } catch (error: any) {
-      console.error('Error al cargar historiales:', error);
-      showToastMessage('Error al cargar historiales');
+      if (searchTerm.trim() === '') {
+        const response = await api.get('/historial', {
+          params: { page, limit: itemsPerPage }
+        });
+        setHistoriales(response.data.items);
+        setTotalItems(response.data.total);
+      } else {
+        const response = await api.get('/historial/search', {
+          params: { texto: searchTerm.trim() }
+        });
+        setHistoriales(response.data);
+        setTotalItems(response.data.length);
+      }
+    } catch (error) {
+      // Manejo de error
     } finally {
       setLoading(false);
     }
-  }, [showToastMessage]);
+  }, [itemsPerPage, searchTerm]);
+
 
   // Función para buscar historiales
   const searchHistoriales = useCallback(async () => {
@@ -101,17 +113,15 @@ const Tab1: React.FC = () => {
 
   // Efecto para refetch cuando cambia la bandera
   useEffect(() => {
-    fetchHistoriales();
-  }, [refetchFlag, fetchHistoriales]);
+    fetchHistoriales(currentPage);
+  }, [currentPage, fetchHistoriales, refetchFlag]);
+
 
   // Efecto para búsqueda con debounce
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      searchHistoriales();
-    }, 300);
     setCurrentPage(1);
-    return () => clearTimeout(timeoutId);
-  }, [searchHistoriales]);
+  }, [searchTerm]);
+
 
   // Función para navegar al detalle
   const handleVerHistorial = useCallback((historialId: number) => {
@@ -156,7 +166,7 @@ const Tab1: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar className="detalles-arriba">
-          <UserMenu titulo="HISTORIALES" />
+          <UserMenu titulo="📋 HISTORIALES" />
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="p-4">
@@ -255,23 +265,16 @@ const Tab1: React.FC = () => {
         <div className="flex justify-center items-center gap-2 mt-4">
           <IonButton
             className="color-boton"
-            size="small"
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => prev - 1)}
-          >
-            Anterior
-          </IonButton>
-          <span className="text-sm">
-            Página {currentPage} de {totalPages}
-          </span>
+            onClick={() => setCurrentPage(prev => prev - 1)}
+          >Anterior</IonButton>
+
           <IonButton
-            size="small"
-            disabled={currentPage === totalPages}
             className="color-boton"
-            onClick={() => setCurrentPage((prev) => prev + 1)}
-          >
-            Siguiente
-          </IonButton>
+            disabled={currentPage === totalPages || totalPages === 0}
+            onClick={() => setCurrentPage(prev => prev + 1)}
+          >Siguiente</IonButton>
+
         </div>
         <IonToast
           isOpen={showToast}

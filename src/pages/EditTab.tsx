@@ -31,7 +31,9 @@ import UserMenu from '../components/UserMenu';
 
 function edadTextoAFecha(edad: string): string {
   // Actualizar regex para manejar solo meses
-  const match = edad.match(/(?:(\d+)\s*años?)?\s*(?:(\d+)\s*mes(?:es)?)?/i);
+  const match = edad.match(
+  /(?:(\d+)\s*años?)?\s*(?:y\s*)?(?:(\d+)\s*mes(?:es)?)?/i
+);
   if (!match) return '';
   
   const anios = parseInt(match[1] ?? '0');
@@ -40,6 +42,7 @@ function edadTextoAFecha(edad: string): string {
   const fecha = new Date();
   fecha.setFullYear(fecha.getFullYear() - anios);
   fecha.setMonth(fecha.getMonth() - meses);
+  console.log({ match, anios, meses });
 
   return fecha.toISOString().split('T')[0]; // YYYY-MM-DD
 }
@@ -139,7 +142,7 @@ const EditTab: React.FC = () => {
     receta: '',
     recomendacion: ''
   };
-
+  const [editandoEdad, setEditandoEdad] = useState(false);
   const [edadAnio, setEdadAnio] = useState<number | null>(null);
   const [edadMes, setEdadMes] = useState<number | null>(null);
   const [formData, setFormData] = useState<FormData>(initialForm);
@@ -457,19 +460,60 @@ const EditTab: React.FC = () => {
               </IonItem>
             </IonCol>
 
-            <IonCol size="12" sizeMd="3">
-              <IonItem className="rounded-md border border-gray-300 flex flex-col" lines="none">
-                <IonLabel className="text-gray-700 font-semibold mb-1">
-                  Edad *
-                </IonLabel>
+<IonCol size="12" sizeMd="3">
+  <IonItem className="rounded-md border border-gray-300" lines="none">
+    <IonLabel position="stacked" className="text-gray-700 font-semibold">
+      Edad *
+    </IonLabel>
 
-                {formData.fechaNacimiento && (
-                  <IonLabel className="ion-margin-top text-sm text-gray-600">
-                    {formData.fechaNacimiento}
-                  </IonLabel>
-                )}
-              </IonItem>
-            </IonCol>
+    {!editandoEdad ? (
+      <>
+        <IonLabel className="ion-margin-top text-sm text-gray-700">
+          {formData.fechaNacimiento || '—'}
+        </IonLabel>
+
+        <IonButton
+          size="small"
+          fill="clear"
+          onClick={() => setEditandoEdad(true)}
+        >
+          Editar
+        </IonButton>
+      </>
+    ) : (
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <IonInput
+          type="number"
+          placeholder="Años"
+          value={edadAnio ?? ''}
+          min={0}
+          onIonInput={(e) =>
+            setEdadAnio(e.detail.value ? Number(e.detail.value) : null)
+          }
+        />
+
+        <IonInput
+          type="number"
+          placeholder="Meses"
+          value={edadMes ?? ''}
+          min={0}
+          max={11}
+          onIonInput={(e) =>
+            setEdadMes(e.detail.value ? Number(e.detail.value) : null)
+          }
+        />
+
+        <IonButton
+          size="small"
+          fill="clear"
+          onClick={() => setEditandoEdad(false)}
+        >
+          Listo
+        </IonButton>
+      </div>
+    )}
+  </IonItem>
+</IonCol>
 
           </IonRow>
 

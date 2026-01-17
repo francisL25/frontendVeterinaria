@@ -53,18 +53,18 @@ const ReporteMensualPage: React.FC = () => {
     const obtenerRangoSemana = (semana: string, mes: string): { inicio: string, fin: string } => {
         const mesNum = parseInt(mes, 10) - 1; // Agregar radix
         const semanaNum = parseInt(semana, 10); // Agregar radix
-        
+
         // Calcular inicio de la semana
         const inicio = new Date(anioActual, mesNum, 1 + (semanaNum - 1) * 7);
         const fin = new Date(inicio);
         fin.setDate(inicio.getDate() + 6);
-        
+
         // Ajustar al último día del mes si es necesario
         const ultimoDiaMes = new Date(anioActual, mesNum + 1, 0);
         if (fin > ultimoDiaMes) {
             fin.setTime(ultimoDiaMes.getTime());
         }
-        
+
         const toYMD = (d: Date) => d.toISOString().split('T')[0];
         return { inicio: toYMD(inicio), fin: toYMD(fin) };
     };
@@ -75,12 +75,12 @@ const ReporteMensualPage: React.FC = () => {
             mostrarError('Selecciona un mes.');
             return;
         }
-        
+
         if (tipoBusqueda === 'dia' && !dia) {
             mostrarError('Selecciona un día.');
             return;
         }
-        
+
         if (tipoBusqueda === 'semana' && !semana) {
             mostrarError('Selecciona una semana.');
             return;
@@ -90,9 +90,9 @@ const ReporteMensualPage: React.FC = () => {
             setLoading(true);
             limpiarResultados();
 
-            const params: Record<string, string> = { 
-                anio: anioActual.toString(), 
-                mes 
+            const params: Record<string, string> = {
+                anio: anioActual.toString(),
+                mes
             };
             const endpoint = '/ventas/reporte-diario';
 
@@ -112,7 +112,7 @@ const ReporteMensualPage: React.FC = () => {
             if (!data) {
                 throw new Error('No se recibió respuesta del servidor');
             }
-            
+
             if (!Array.isArray(data.detalle)) {
                 throw new Error('Formato de respuesta inválido');
             }
@@ -128,15 +128,15 @@ const ReporteMensualPage: React.FC = () => {
                     total = Number(data.total_general);
                 }
             }
-            
+
             setTotalGeneral(isNaN(total) ? 0 : total);
 
         } catch (error: any) {
             console.error('Error al obtener reporte:', error);
-            
+
             // Manejo de errores más específico
             let mensajeError = 'Ocurrió un error al obtener el reporte.';
-            
+
             if (error.response) {
                 // Error de respuesta del servidor
                 if (error.response.status === 404) {
@@ -150,7 +150,7 @@ const ReporteMensualPage: React.FC = () => {
             } else if (error.message) {
                 mensajeError = error.message;
             }
-            
+
             mostrarError(mensajeError);
         } finally {
             setLoading(false);
@@ -197,12 +197,13 @@ const ReporteMensualPage: React.FC = () => {
             </IonHeader>
 
             <IonContent fullscreen className="p-4">
-                <div className="mt-6 mb-4 flex gap-4 flex-nowrap overflow-x-auto items-center">
+                <div className="mt-6 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
 
                     <BackButton />
 
-                    <IonSelect 
-                        value={tipoBusqueda} 
+                    <IonSelect
+                        className="w-full"
+                        value={tipoBusqueda}
                         onIonChange={e => handleTipoBusquedaChange(e.detail.value)}
                         interface="popover"
                         placeholder="Tipo de búsqueda"
@@ -212,7 +213,8 @@ const ReporteMensualPage: React.FC = () => {
                     </IonSelect>
 
                     <IonSelect
-                        placeholder="Seleccionar mes"
+                        className="w-full"
+                        placeholder="Mes"
                         value={mes}
                         onIonChange={(e) => handleMesChange(e.detail.value)}
                         interface="popover"
@@ -230,7 +232,8 @@ const ReporteMensualPage: React.FC = () => {
 
                     {tipoBusqueda === 'dia' && (
                         <IonSelect
-                            placeholder="Seleccionar día"
+                            className="w-full"
+                            placeholder="Día"
                             value={dia}
                             onIonChange={(e) => setDia(e.detail.value)}
                             disabled={!mes}
@@ -246,13 +249,14 @@ const ReporteMensualPage: React.FC = () => {
 
                     {tipoBusqueda === 'semana' && (
                         <IonSelect
-                            placeholder="Seleccionar semana"
+                            className="w-full"
+                            placeholder="Semana"
                             value={semana}
                             onIonChange={(e) => setSemana(e.detail.value)}
                             disabled={!mes}
                             interface="popover"
                         >
-                            {obtenerSemanasValidas(mes).map((s) => (
+                            {obtenerSemanasValidas(mes).map(s => (
                                 <IonSelectOption key={s} value={String(s)}>
                                     Semana {s}
                                 </IonSelectOption>
@@ -260,13 +264,15 @@ const ReporteMensualPage: React.FC = () => {
                         </IonSelect>
                     )}
 
-                    <IonButton 
-                        onClick={obtenerReporte} 
+                    <IonButton
+                        expand="block"
+                        onClick={obtenerReporte}
                         disabled={loading}
-                        color="primary"
+                        className="color-boton h-[42px]"
                     >
                         {loading ? <IonSpinner name="crescent" /> : 'Consultar'}
                     </IonButton>
+
                 </div>
 
                 {rangoSeleccionado && (
