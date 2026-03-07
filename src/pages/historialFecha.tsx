@@ -85,7 +85,7 @@ const DetallesHistorial: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar className="detalles-arriba bg-blue-700">
-          <UserMenu titulo={`Detalles del Historial #${idH}`} />
+          <UserMenu titulo={`Detalles del Historial # ${idH}`} />
         </IonToolbar>
       </IonHeader>
 

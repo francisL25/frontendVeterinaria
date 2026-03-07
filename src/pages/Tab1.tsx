@@ -39,9 +39,12 @@ interface Historial {
 }
 
 const Tab1: React.FC = () => {
+  const [idSearch, setIdSearch] = useState('');
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const isSearchingById = !!idSearch;
+
 
   const { refetchFlag } = useContext(HistorialContext);
   const [searchTerm, setSearchTerm] = useState('');
@@ -111,10 +114,39 @@ const Tab1: React.FC = () => {
     }
   }, [searchTerm, fetchHistoriales, showToastMessage]);
 
+  const searchHistorialById = async () => {
+    if (!idSearch) return;
+
+    try {
+      setLoading(true);
+
+      const response = await api.get(`/historial/${idSearch}`);
+
+      // Mostrar solo el resultado encontrado
+      setHistoriales([response.data]);
+      setTotalItems(1);
+      setCurrentPage(1);
+
+    } catch (error: any) {
+      setHistoriales([]);
+      setTotalItems(0);
+      showToastMessage('Historial no encontrado', 'warning');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   // Efecto para refetch cuando cambia la bandera
   useEffect(() => {
     fetchHistoriales(currentPage);
   }, [currentPage, fetchHistoriales, refetchFlag]);
+
+  useEffect(() => {
+    if (!idSearch) {
+      fetchHistoriales(1);
+    }
+  }, [idSearch, fetchHistoriales]);
 
 
   // Efecto para búsqueda con debounce
@@ -166,7 +198,7 @@ const Tab1: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar className="detalles-arriba">
-          <UserMenu titulo="📋 HISTORIALES" />
+          <UserMenu titulo=" 📋 HISTORIALES" />
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="p-4">
@@ -194,7 +226,8 @@ const Tab1: React.FC = () => {
             🗓️ Ver Citas Médicas
           </IonButton>
           {/* Barra de búsqueda */}
-          <div className="flex items-center w-full md:w-2/5 bg-white dark:bg-gray-800 rounded-lg shadow-md px-3 py-2 gap-2 border border-gray-300">
+          <div className="flex items-center w-full md:w-1/3 bg-white dark:bg-gray-800 rounded-lg shadow-md px-3 py-2 gap-2 border border-gray-300">
+
             <IonIcon icon={searchOutline} className="text-gray-500 text-xl flex-shrink-0" />
             <IonInput
               placeholder="Buscar por nombre de mascota, dueño, C.I..."
@@ -204,6 +237,29 @@ const Tab1: React.FC = () => {
               clearInput
             />
           </div>
+          <div className="flex items-center w-32 md:w-40 mr-4 bg-white dark:bg-gray-800 rounded-lg shadow-md px-3 py-2 gap-2 border border-gray-300">
+
+            <IonInput
+              type="number"
+              placeholder="Buscar ID"
+              value={idSearch}
+              onIonInput={(e) => setIdSearch(e.detail.value!)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  searchHistorialById();
+                }
+              }}
+              clearInput
+            />
+          </div>
+          {/*<IonButton
+            className="color-boton"
+            onClick={searchHistorialById}
+            disabled={!idSearch}
+          >
+            Buscar ID
+          </IonButton>
+          /* Botón de búsqueda */}
         </div>
 
         {/* Tabla con loading */}
@@ -217,7 +273,8 @@ const Tab1: React.FC = () => {
           <table className="min-w-full text-sm text-left">
             <thead style={{ backgroundColor: '#019391' }} className="text-white sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-2">#</th>
+                <th className="px-4 py-2">Nro</th>
+                <th className="px-4 py-2">ID</th>
                 <th className="px-4 py-2">Nombre Mascota</th>
                 <th className="px-4 py-2">Edad</th>
                 <th className="px-4 py-2">Nombre Dueño</th>
@@ -230,7 +287,7 @@ const Tab1: React.FC = () => {
             <tbody>
               {paginatedHistoriales.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
                     {searchTerm ? 'No se encontraron resultados' : 'No hay historiales registrados'}
                   </td>
                 </tr>
@@ -238,6 +295,9 @@ const Tab1: React.FC = () => {
                 paginatedHistoriales.map((historial, index) => (
                   <tr key={historial.id} className="border-b hover:bg-gray-100 dark:hover:bg-gray-700">
                     <td className="px-4 py-2">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                    <td className="px-4 py-2 font-mono text-gray-700">
+                      {historial.id}
+                    </td>
                     <td className="px-4 py-2 font-medium">{historial.nombreMascota || 'N/A'}</td>
                     <td className="px-4 py-2">{calculateAge(historial.fechaNacimiento)}</td>
                     <td className="px-4 py-2">{historial.nombreDueno || 'N/A'}</td>
@@ -265,15 +325,20 @@ const Tab1: React.FC = () => {
         <div className="flex justify-center items-center gap-2 mt-4">
           <IonButton
             className="color-boton"
-            disabled={currentPage === 1}
+            disabled={isSearchingById || currentPage === 1}
             onClick={() => setCurrentPage(prev => prev - 1)}
-          >Anterior</IonButton>
+          >
+            Anterior
+          </IonButton>
 
           <IonButton
             className="color-boton"
-            disabled={currentPage === totalPages || totalPages === 0}
+            disabled={isSearchingById || currentPage === totalPages || totalPages === 0}
             onClick={() => setCurrentPage(prev => prev + 1)}
-          >Siguiente</IonButton>
+          >
+            Siguiente
+          </IonButton>
+
 
         </div>
         <IonToast
